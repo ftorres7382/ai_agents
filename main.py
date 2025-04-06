@@ -1,14 +1,22 @@
 import sys
+import typing as t
+
+import config as C
+from app_code.Utilities.OLM import OLM
 
 
-def main():
+def main() -> None:
     '''
     This is the function from which the other functions will be run
     '''
 
-    check_requirements()
+    passed = check_requirements()
+    if not passed:
+        quit()
 
-def check_requirements(verbose = False):
+    
+
+def check_requirements(verbose: bool = False) -> bool:
     '''
     This function checks for the correct starting requirements to start up the program
     '''
@@ -19,7 +27,7 @@ def check_requirements(verbose = False):
     # OS MUST be Windows
     ###############################
     if sys.platform != "win32":
-        print("ERROR! This program requires Windows to run.")
+        _print("ERROR! This program requires Windows to run.", verbose)
         return False
 
     ###############################
@@ -30,15 +38,24 @@ def check_requirements(verbose = False):
         return False
     
     ###############################
-    # MUST have ollama running with the listen port open
-    # To confirm we will ping the port
+    # Ollama MUST be running
     ###############################
-
+    try:
+        OLM.get_version()
+    except:
+        _print(f"ERROR! Was not able to get the version of ollama! Make sure ollama is running on {C.complete_ollama_api_url}", verbose=False)
+    
+    ###############################
+    # ALL valid modes MUST be in the ollama
+    ###############################
+    
+    
+    breakpoint()
 
     _print("All requirements are met!", verbose)
     return True
 
-def _print(value, verbose = True):
+def _print(value: t.Any, verbose: bool = True) -> None:
     '''
     Only prints if verbose is True
     '''
