@@ -3,6 +3,8 @@ import typing as t
 
 import config as C
 from app_code.Utilities.OLM import OLM
+from app_code.enums import *
+from app_code.agents.secretary_agent import secretary_agent
 
 
 def main() -> None:
@@ -10,9 +12,12 @@ def main() -> None:
     This is the function from which the other functions will be run
     '''
 
-    passed = check_requirements()
+    passed = check_requirements(verbose=C.requirements_check_verbose)
     if not passed:
         quit()
+
+    # Start the selected agent
+    C.selected_agent.start()
 
     
 
@@ -44,13 +49,17 @@ def check_requirements(verbose: bool = False) -> bool:
         OLM.get_version()
     except:
         _print(f"ERROR! Was not able to get the version of ollama! Make sure ollama is running on {C.complete_ollama_api_url}", verbose=False)
+        return False
     
     ###############################
-    # ALL valid modes MUST be in the ollama
+    # ALL valid models MUST be in the ollama
     ###############################
-    
-    
-    breakpoint()
+    required_models = [element.value for element in VALID_MODEL_NAMES]
+    models_list = OLM.get_model_names_list()
+    required_unaviailable_model_names = list(set(required_models) - set(models_list))
+    if len(required_unaviailable_model_names) > 0:
+        _print(f"ERROR! Ollama is missing the following REQUIRED models: {required_unaviailable_model_names}")
+        return False
 
     _print("All requirements are met!", verbose)
     return True

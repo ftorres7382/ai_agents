@@ -10,6 +10,21 @@ class OLM:
     It makes doing requests with ollama simpler and easier
     '''
     complete_ollama_api_url = C.complete_ollama_api_url
+
+    @classmethod
+    def get_model_names_list(cls) -> t.List[str]:
+        '''
+        This function returns a list of model names available in ollama
+        '''
+        list_api_endpoint = "api/tags"
+        list_api_url = urllib.parse.urljoin(cls.complete_ollama_api_url, list_api_endpoint)
+        response = requests.get(list_api_url)
+        result = cls.get_response_dict(response)
+        models_info = result["models"]
+        model_names_list = [info["name"] for info in models_info]
+        return model_names_list
+
+
     @classmethod
     def get_version(cls) -> t.Any:
         '''

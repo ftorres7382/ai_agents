@@ -1,16 +1,19 @@
-from app_code.enums import *
+from app_code.agents.base_agent import BASE_AGENT
+from app_code.Utilities.SDU import SDU
 from dataclasses import dataclass
 
 @dataclass
-class secretary_agent:
+class secretary_agent(BASE_AGENT):
     '''
-    This agent will take nots of what it hears in mettings and such
+    This agent will take notes of what it hears in the audio out of the computer
     '''
-    model: VALID_MODELS_NAMES
-    name: str
 
-    def start(self):
+    def start(self) -> None:
         '''
         This command starts the model
         '''
+
+        print(SDU.get_devices_info())
+
+        print("start")
 
