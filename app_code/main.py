@@ -1,9 +1,9 @@
 import sys
 import typing as t
 
-import config as C
+import app_code.config as C
 from app_code.Utilities.OLM import OLM
-from app_code.enums import *
+from app_code.literals import *
 from app_code.agents.secretary_agent import secretary_agent
 
 

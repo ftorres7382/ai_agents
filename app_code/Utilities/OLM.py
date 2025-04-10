@@ -3,7 +3,7 @@ import requests
 import urllib
 import typing as t
 
-import config as C
+import app_code.config as C
 class OLM:
     '''
     This is the ollama utility.

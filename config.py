@@ -11,8 +11,7 @@ ORRR make a mini program that creates the configuration and checks all the setti
 
 '''
 
-from app_code.enums import VALID_MODEL_NAMES, VALID_AGENT_CLASSES
-from app_code.agents.secretary_agent import secretary_agent
+from app_code.literals import VALID_MODEL_NAMES
 
 import typing as t
 
@@ -40,13 +39,11 @@ class SETTINGS_DICT(t.TypedDict):
     # Agents Settings
     ##########################
     # region:
-    agent_object: t.Literal[
-        VALID_AGENT_CLASSES.secretary_agent
-        ]
+    # agent_object
     # endregion
 
 
-settings = {
+settings: SETTINGS_DICT = {
     ##########################
     # Build and Requirements Validation Settings
     ##########################
@@ -70,12 +67,12 @@ settings = {
     # Agents Settings
     ##########################
     # region:
-    "agent_object": secretary_agent(
-        name="Quinn",
-        model_name=VALID_MODEL_NAMES.deepseek_r1_14b
-    )
+    # "agent_object": secretary_agent(
+    #     name="Quinn",
+    #     model_name=VALID_MODEL_NAMES.deepseek_r1_14b
+    # )
     # endregion
 }
 
 # Fill in the missing values
-settings['ollama_url'] = f"{settings['ollama_url']}:{settings['ollama_api_port']}"
+settings['complete_ollama_api_url'] = f"{settings['ollama_url']}:{settings['ollama_api_port']}"

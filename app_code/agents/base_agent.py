@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from dataclasses import dataclass
-from app_code.enums import VALID_MODEL_NAMES
+from app_code.literals import VALID_MODEL_NAMES
 @dataclass
 class BASE_AGENT(ABC):
     '''
