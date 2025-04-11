@@ -12,17 +12,23 @@ import argparse
 import subprocess
 import os
 import typing as t
+import time
 
 import config as C
 
 # Global variable to track verbosity
 verbose_build = False
 python_command = None
+venv_python_path = os.path.join(
+    C.settings["venv_folderpath"],
+    "bin/python3"    
+)
 
 def main():
     '''
     Checks for the minimum needed to create the virtual environment, install the dependencies and run the project
     '''
+    print()
 
     ##########################
     # System level checks
@@ -74,9 +80,29 @@ def main():
     v_print()
     # endregion
 
+    # Activate the 
+
     # Run mypy check first
-    command = "mypy --strict app_code/main.py"
-    run_command_list(command, capture_output=False)
+    print("Checking code with mypy...")
+    command = f"{venv_python_path} -m mypy --strict app_code/main.py" #It could be run with the binś version of the mypy command, but I like it better this way, more explicit
+    run_command(command, capture_output=False, return_error=True)
+    print()
+
+    
+    # Run the code using the 
+    print("Running app_code/main.py...")
+    command = f"{venv_python_path} app_code/main.py"
+    run_command(command)
+
+    print()
+    
+
+def check_ollama():
+    '''
+    This function checks all ollama requirements in a few ways:
+    1. Checks for ollama -v
+    2. Checks for a response on 
+    '''
 
 ##########################
 # Python Virtual Environment Setup Functions
@@ -87,20 +113,11 @@ def check_venv():
     Will check the venv dependencies, compared to requirements.txt
 
     If they differ, then delete the venv directory and try to install requirements to C.settings["venv_folderpath"].
-    '''
+    '''   
     
-    activate_venv_path = os.path.join(
-        C.settings["venv_folderpath"],
-        "bin/activate"    
-        )
-
     # Create the command that will do this
-    commands = [
-        f"source {activate_venv_path}",
-        "pip freeze"
-    ]
-    full_command_str = " && ".join(commands)
-    result = run_command_list(full_command_str, verbose=True)
+    commands = f"{venv_python_path} -m pip freeze"
+    result = run_command(commands, verbose=True)
 
     # Read in the requirements
     with open(C.settings["requirements_filepath"],'r') as f:
@@ -120,16 +137,13 @@ def check_venv():
     if len(missing_reqs) == 0:
         return True
     
-    print(f"The python virtual environment is missing modules. Attempting to install requirements...")
+    print(f"\nThe python virtual environment is missing modules. Attempting to install requirements...\n")
+    time.sleep(1)
     v_print(f"It is missing {len(missing_reqs)} requirements: {missing_reqs}")
 
     # Try to install the requirements
-    commands_list = [
-        f"source {activate_venv_path}",
-        f"pip install -r {C.settings['requirements_filepath']}"
-        ]
-    command = " && ".join(commands_list)
-    result = run_command_list(command, capture_output=False,return_error=True)
+    command = f"{venv_python_path} -m pip install -r {C.settings['requirements_filepath']}"
+    result = run_command(command, capture_output=False,return_error=True)
     if result is not None:
         print("ERROR! Was not able to install the packages automatically! Please Install the packages manually or delete the .venv folder and try again!")
         print(f"Received error: {result}")
@@ -173,7 +187,7 @@ def check_bash():
 
     # Try to get the bash version
     command_list = ["bash", "--version"]
-    result = run_command_list(command_list, verbose=False, return_error=True)
+    result = run_command(command_list, verbose=False, return_error=True)
 
     if not isinstance(result, str):
         print("ERROR! bash MUST be installed!")
@@ -204,7 +218,7 @@ def check_python():
         v_print(f"Checking for {python_command} CLI command...")
 
         command_list = [python_command, '--version']
-        result = run_command_list(command_list, return_error=True, verbose=False)
+        result = run_command(command_list, return_error=True, verbose=False)
 
         if not isinstance(result, str):
             v_print(f"{python_command} is not installed...")
@@ -236,7 +250,7 @@ def check_venv_module():
     This function checks if the venv module is installed in the python we found 
     '''
     commands_list = [python_command, "-m", "venv", "--help"]
-    result = run_command_list(commands_list, verbose=False, return_error=True)
+    result = run_command(commands_list, verbose=False, return_error=True)
 
     if not isinstance(result, str):
         print(f"ERROR! '{python_command}' MUST have the venv module installed!")
@@ -274,7 +288,7 @@ def v_print(message="", verbose = None):
     if verbose:
         print(message)
 
-def run_command_list(
+def run_command(
         command: t.Union[str,t.List[str]], 
         return_error = False, 
         capture_output = True, 
