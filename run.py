@@ -18,6 +18,7 @@ import config as C
 
 # Global variable to track verbosity
 verbose_build = False
+skip_checks = False
 python_command = None
 venv_python_path = os.path.join(
     C.settings["venv_folderpath"],
@@ -27,7 +28,19 @@ venv_python_path = os.path.join(
 def main():
     '''
     Checks for the minimum needed to create the virtual environment, install the dependencies and run the project
+    
+    Any missing requirements or content will be checked by the main code.
+    The main code is in a way better position to do checks since it will have all modules installed and available
     '''
+    if skip_checks:
+        # Setup any sys paths
+        for path in C.settings["include_paths"]:
+            sys.path.append(path)
+            
+        from app_code.main import run as run_app
+        run_app()
+        exit(0)
+
     print()
 
     ##########################
@@ -80,29 +93,26 @@ def main():
     v_print()
     # endregion
 
-    # Activate the 
+    # Activate the virtual environment
 
     # Run mypy check first
     print("Checking code with mypy...")
     command = f"{venv_python_path} -m mypy --strict app_code/main.py" #It could be run with the binś version of the mypy command, but I like it better this way, more explicit
-    run_command(command, capture_output=False, return_error=True)
+    result = run_command(command, capture_output=False, return_error=True)
     print()
+    if result is not None:
+        print("ERROR! The code did not pass mypy check! Please fix and try again!\n")
+        exit(1)
+    
 
     
     # Run the code using the 
-    print("Running app_code/main.py...")
-    command = f"{venv_python_path} app_code/main.py"
-    run_command(command)
+    print("Starting App...")
+    command = f"{venv_python_path} {__file__} --skip_checks"
+    run_command(command, capture_output=False)
 
     print()
     
-
-def check_ollama():
-    '''
-    This function checks all ollama requirements in a few ways:
-    1. Checks for ollama -v
-    2. Checks for a response on 
-    '''
 
 ##########################
 # Python Virtual Environment Setup Functions
@@ -272,11 +282,14 @@ def setup_arguments():
     Sets up argument parsing for --verbose and --help
     '''
     global verbose_build
+    global skip_checks
     parser = argparse.ArgumentParser(description="Setup environment for the project.")
     parser.add_argument('--verbose_build', action='store_true', help="Enable verbose output when building.")
+    parser.add_argument('--skip_checks', action='store_true', help="Runs application without any of the requirement checking or dependency installations.")
     args = parser.parse_args()
     
     verbose_build = args.verbose_build
+    skip_checks = args.skip_checks
 
 def v_print(message="", verbose = None):
     '''

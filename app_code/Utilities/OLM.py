@@ -3,13 +3,18 @@ import requests
 import urllib
 import typing as t
 
-import app_code.config as C
+import config as C
+import os
+
+
 class OLM:
     '''
     This is the ollama utility.
     It makes doing requests with ollama simpler and easier
     '''
-    complete_ollama_api_url = C.complete_ollama_api_url
+
+    # Ensure it is a string since it could be None and mypy does not like that 
+    complete_ollama_api_url = str(C.settings["complete_ollama_api_url"]) 
 
     @classmethod
     def get_model_names_list(cls) -> t.List[str]:

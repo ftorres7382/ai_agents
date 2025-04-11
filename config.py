@@ -7,7 +7,7 @@ This could have issues in the furture with safe loading
     To fix this we can strictly enforce the class structures
     possibly make objects from them safe load only what we need
 
-ORRR make a mini program that creates the configuration and checks all the settings to make sure they are correct
+OR make a mini program that creates the configuration and checks all the settings to make sure they are correct
 
 '''
 
@@ -24,6 +24,13 @@ class SETTINGS_DICT(t.TypedDict):
     venv_folderpath: str
     # endregion
 
+    ##########################
+    # Run Configuration Settings
+    ##########################
+    # region:
+    include_paths: t.List[str]
+    # endregion
+
 
     ##########################
     # Ollama Settings
@@ -31,7 +38,7 @@ class SETTINGS_DICT(t.TypedDict):
     # region:
     ollama_url: str
     ollama_api_port: int
-    complete_ollama_api_url: t.Union[str, None]
+    complete_ollama_api_url: t.Optional[str]
     # endregion
 
 
@@ -51,6 +58,16 @@ settings: SETTINGS_DICT = {
     "requirements_filepath": "./requirements.txt",
     "venv_folderpath": ".venv",
     # endregion
+
+    ##########################
+    # Run Configuration Settings
+    ##########################
+    # region:
+    "include_paths": [
+        "./app_code"
+    ],
+    # endregion
+
 
     ##########################
     # Ollama Settings
