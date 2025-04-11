@@ -68,11 +68,15 @@ def main():
     v_print()
 
     # Check all the requirements for venv
-    print("Checking venv installed modules...")
+    v_print("Checking modules installed in virtual environment...")
     check_venv()
+    v_print("PASSED! All required modules validated/installed!")
     v_print()
-
     # endregion
+
+    # Run mypy check first
+    command = "mypy --strict app_code/main.py"
+    run_command_list(command, capture_output=False)
 
 ##########################
 # Python Virtual Environment Setup Functions
@@ -85,7 +89,54 @@ def check_venv():
     If they differ, then delete the venv directory and try to install requirements to C.settings["venv_folderpath"].
     '''
     
-    pass
+    activate_venv_path = os.path.join(
+        C.settings["venv_folderpath"],
+        "bin/activate"    
+        )
+
+    # Create the command that will do this
+    commands = [
+        f"source {activate_venv_path}",
+        "pip freeze"
+    ]
+    full_command_str = " && ".join(commands)
+    result = run_command_list(full_command_str, verbose=True)
+
+    # Read in the requirements
+    with open(C.settings["requirements_filepath"],'r') as f:
+        requirements_str = f.read()
+    
+    # All requirements in the file must be found in the venv
+    venv_reqs_list = result.split("\n")
+    
+    # Remove all empty strings
+    venv_reqs_list = [req for req in venv_reqs_list if req != '']
+
+    reqs_list = requirements_str.split("\n")
+    reqs_list = [req for req in reqs_list if req != '']
+
+    # Check that all requirements are in the venv
+    missing_reqs = list(set(reqs_list) - set(venv_reqs_list))
+    if len(missing_reqs) == 0:
+        return True
+    
+    print(f"The python virtual environment is missing modules. Attempting to install requirements...")
+    v_print(f"It is missing {len(missing_reqs)} requirements: {missing_reqs}")
+
+    # Try to install the requirements
+    commands_list = [
+        f"source {activate_venv_path}",
+        f"pip install -r {C.settings['requirements_filepath']}"
+        ]
+    command = " && ".join(commands_list)
+    result = run_command_list(command, capture_output=False,return_error=True)
+    if result is not None:
+        print("ERROR! Was not able to install the packages automatically! Please Install the packages manually or delete the .venv folder and try again!")
+        print(f"Received error: {result}")
+        exit(1)
+
+    return True
+    
 
 
 def make_initial_venv_folder():
@@ -223,7 +274,11 @@ def v_print(message="", verbose = None):
     if verbose:
         print(message)
 
-def run_command_list(command_list, return_error = False, verbose = True) -> t.Union[str, subprocess.CalledProcessError]:
+def run_command_list(
+        command: t.Union[str,t.List[str]], 
+        return_error = False, 
+        capture_output = True, 
+        verbose = True) -> t.Union[None, str, subprocess.CalledProcessError]:
     '''
     This function tries to run the command and raises an exception if if fails
     
@@ -231,13 +286,17 @@ def run_command_list(command_list, return_error = False, verbose = True) -> t.Un
 
     The error command will be of the format: ERROR! When running command '{command}' got error: {error}
     '''
+
+    if not isinstance(command, str):
+        command = " ".join(command)
+
     try:
         # Run the command using subprocess
-        result = subprocess.run(command_list, capture_output=True, text=True, check=True)
+        result = subprocess.run(command, capture_output=capture_output, text=True, check=True,shell=True, executable="/bin/bash")
         return result.stdout
     except subprocess.CalledProcessError as e:
         # Format and raise an exception with the error message
-        error_message = f"ERROR! When running command '{' '.join(command_list)}' got error: {e.stderr}"
+        error_message = f"ERROR! When running command '{command}' got error: {e.stderr}"
         v_print(error_message, verbose)
         if return_error:
             return e

@@ -7,7 +7,7 @@ from app_code.literals import *
 from app_code.agents.secretary_agent import secretary_agent
 
 
-def main() -> None:
+def run() -> None:
     '''
     This is the function from which the other functions will be run
     '''
@@ -74,4 +74,4 @@ def _print(value: t.Any, verbose: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    main()
+    run()
