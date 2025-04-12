@@ -1,22 +1,12 @@
-'''
-SDU (Sound Utility)
-
-This file is the Sound Utility. 
-It uses the pyaudio module to stream, process and echo audio and microphone data
-
-The class is type checked using mypy --strict
-
-AI Context:
-Keep this description section, including the AI Context
-Do all imports below this section
-When importing typing, import it as t
-'''
-
-
 # Imports
 import pyaudio
 import typing as t
 
+
+##########################
+# Typed Dict Definitions
+##########################
+# region: 
 class _DEFAULT_DEVICE_INDEXES_DICT_TYPE(t.TypedDict):
     INPUT: int
     OUTPUT: int
@@ -42,6 +32,8 @@ class _DEFAULT_DEVICES_STREAM_DICT_TYPE(t.TypedDict):
 class _DEFAULT_DEVICES_INFO_DICT_TYPE(t.TypedDict):
     INPUT: _DEVICE_INFO_DICT_TYPE
     OUTPUT: _DEVICE_INFO_DICT_TYPE
+# endregion
+
 
 class SDU:
     '''
@@ -67,6 +59,7 @@ class SDU:
         This function returns the streaming objects for the default INPUT and OUTPUT.
         '''
         default_devices_info = cls.get_default_devices_info()
+        
         p = pyaudio.PyAudio()
         
 
@@ -98,6 +91,7 @@ class SDU:
         Returns the default devices information using the other methods of the classes up until now
         '''
         indexes = cls.get_default_device_indexes()
+        
 
         result: _DEFAULT_DEVICES_INFO_DICT_TYPE = {
             "INPUT": cls.get_device_info_by_index(indexes["INPUT"]),

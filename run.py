@@ -13,6 +13,7 @@ import subprocess
 import os
 import typing as t
 import time
+import re
 
 import config as C
 
@@ -33,9 +34,6 @@ def main():
     The main code is in a way better position to do checks since it will have all modules installed and available
     '''
     if skip_checks:
-        # Setup any sys paths
-        for path in C.settings["include_paths"]:
-            sys.path.append(path)
             
         from app_code.main import run as run_app
         run_app()
@@ -98,8 +96,9 @@ def main():
     # Run mypy check first
     print("Checking code with mypy...")
     command = f"{venv_python_path} -m mypy --strict app_code/main.py" #It could be run with the binś version of the mypy command, but I like it better this way, more explicit
-    result = run_command(command, capture_output=False, return_error=True)
+    result = run_command(command, capture_output=False, return_error=True, verbose=False)
     print()
+
     if result is not None:
         print("ERROR! The code did not pass mypy check! Please fix and try again!\n")
         exit(1)
@@ -109,7 +108,7 @@ def main():
     # Run the code using the 
     print("Starting App...")
     command = f"{venv_python_path} {__file__} --skip_checks"
-    run_command(command, capture_output=False)
+    run_command(command, capture_output=False, verbose=False)
 
     print()
     
@@ -210,7 +209,63 @@ def check_bash():
         print(f"ERROR! The command '{' '.join(command_list)}' did not give an error \
               but does not contain 'bash' in its first line. Instead it received: {result}")
         exit(1)
+
+def check_portaudio():
+    '''
+    This function makes sure the port audio is installed
+
+    sudo apt install pipewire pipewire-pulse wireplumber was also run to install things but I do not want to validate that right now
     
+    systemctl --user stop pulseaudio.service
+    systemctl --user stop pulseaudio.socket
+
+    systemctl --user enable --now pipewire.service
+    systemctl --user enable --now pipewire-pulse.service
+    systemctl --user enable --now wireplumber.service
+
+    Re-started system
+
+    sudo apt install pulseaudio
+
+    sudo apt-get install jackd2
+    enabled real time process... something
+    
+    sudo apt-get install alsa-utils
+
+    sudo apt install multimedia-jack
+    pulseaudio --kill
+    jack_control start
+
+    sudo apt install jackd2
+
+    jack_control start
+
+    followed this thread https://github.com/Uberi/speech_recognition/issues/526
+    
+    Got fixded by just using sound device This whole check needs to be redone with a noew version of linux
+    '''
+    command = "dpkg -l | grep portaudio"
+    result = run_command(command)
+
+    # All expected regex must be found in the result
+    expected_regex = [
+        "libportaudio2",
+        "libportaudiocpp0",
+        "portaudio19-dev"
+    ]
+
+    passed = True
+    for pattern in expected_regex:
+        if not re.search(pattern, result):
+            passed =  False
+    if not passed:
+        print("ERROR! portaudio installs are required for the pyaudio module! \
+              Consider installing with 'sudo apt install portaudio19-dev python3-dev'. \
+              Check to see if you need to restart pulse audio and get jack control rinning")
+    return True
+
+
+
 def check_python():
     '''
     Uses subprocess to check if the python3.12 command is available.

@@ -24,13 +24,6 @@ class SETTINGS_DICT(t.TypedDict):
     venv_folderpath: str
     # endregion
 
-    ##########################
-    # Run Configuration Settings
-    ##########################
-    # region:
-    include_paths: t.List[str]
-    # endregion
-
 
     ##########################
     # Ollama Settings
@@ -57,15 +50,6 @@ settings: SETTINGS_DICT = {
     # region:
     "requirements_filepath": "./requirements.txt",
     "venv_folderpath": ".venv",
-    # endregion
-
-    ##########################
-    # Run Configuration Settings
-    ##########################
-    # region:
-    "include_paths": [
-        "./app_code"
-    ],
     # endregion
 
 

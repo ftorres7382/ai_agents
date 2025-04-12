@@ -2,8 +2,9 @@ from abc import ABC, abstractmethod
 
 from dataclasses import dataclass
 from app_code.literals import VALID_MODEL_NAMES
+
 @dataclass
-class BASE_AGENT(ABC):
+class base_agent(ABC):
     '''
     This class defines the minimum amount of information needed to create an agent
     An agent needs a name and a model name
