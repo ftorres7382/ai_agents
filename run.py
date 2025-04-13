@@ -35,6 +35,7 @@ def main():
     if skip_checks:
             
         from app_code.main import run as run_app
+        print("Starting the app...")
         run_app()
         exit(0)
 
@@ -118,7 +119,6 @@ def main():
 
     
     # Run the code using the 
-    print("Starting App...")
     command = f"{venv_python_path} {__file__} --skip_checks"
     run_command(command, capture_output=False, verbose=False)
 

@@ -1,4 +1,8 @@
-temp/
+# Ignore msic in assets
+assets/*
+!assets/docs/
+!assets/misc/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

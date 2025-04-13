@@ -6,15 +6,31 @@ import typing as t
 # Typed Dict Definitions
 ##########################
 # region: 
-class DEFAULT_DEVICE_INDEXES_DICT_TYPING(t.TypedDict):
+class DEFAULT_DEVICES_INDEX_DICT_TYPE(t.TypedDict):
     INPUT: int
     OUTPUT: int
+
+class DEFAULT_DEVICE_INFO_DICT_TYPE(t.TypedDict):
+    name: str
+    index: int
+    hostapi: int
+    max_input_channels: int
+    max_output_channels: int
+    default_low_input_latency: float
+    default_low_output_latency: float
+    default_high_input_latency: float
+    default_high_output_latency: float
+    default_samplerate: float
+
+class DEFAULT_DEVICES_INFO_DICT_TYPE(t.TypedDict):
+    INPUT: DEFAULT_DEVICE_INFO_DICT_TYPE
+    OUTPUT: DEFAULT_DEVICE_INFO_DICT_TYPE
 # endregion
 
 class SDU:
 
     @classmethod
-    def get_default_devices_index(cls) -> DEFAULT_DEVICE_INDEXES_DICT_TYPING:
+    def get_default_devices_index(cls) -> DEFAULT_DEVICES_INDEX_DICT_TYPE:
         '''
         This class returns a dictionary with the indexes for the default input and output devices
         '''
@@ -26,6 +42,24 @@ class SDU:
             'OUTPUT': default_indexes[1]
         }
 
+    @classmethod
+    def get_default_devices_info(cls) -> DEFAULT_DEVICES_INFO_DICT_TYPE:
+        '''
+        This function will use the get_default_devices_index to return the information for the default input and output devices
+        '''
+        # Get default device indexes
+        default_devices_indexes = cls.get_default_devices_index()
+        
+        # Get detailed information about the default input device
+        default_input_device_info: DEFAULT_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=default_devices_indexes['INPUT'], kind='input')
+
+        # Get detailed information about the default output device
+        default_output_device_info: DEFAULT_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=default_devices_indexes['OUTPUT'], kind='output')
+        return_dict: DEFAULT_DEVICES_INFO_DICT_TYPE = {
+            "INPUT":default_input_device_info,
+            "OUTPUT": default_output_device_info
+        }
+        return return_dict
 
 
 

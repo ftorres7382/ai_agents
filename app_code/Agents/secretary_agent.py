@@ -16,6 +16,9 @@ class secretary_agent(base_agent):
         '''
         This command starts the model
         '''
+        default_devices_info = SDU.get_default_devices_info()
+
+        print(default_devices_info)
 
         # print("Playing tone...")
 
