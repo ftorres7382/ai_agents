@@ -1,6 +1,14 @@
-# Ignore msic in assets
+# Ignore anything in assets by default
 assets/*
+
+# Let docs be tracked
 !assets/docs/
+
+# Let misc be tracked
+!assets/misc/
+# Do not track any files in misc
+assets/misc/*
+# Except the README
 !assets/misc/README.md
 
 # Byte-compiled / optimized / DLL files
