@@ -48,7 +48,7 @@ settings: SETTINGS_DICT = {
     # Build and Requirements Validation Settings
     ##########################
     # region:
-    "requirements_filepath": "./requirements.txt",
+    "requirements_filepath": "./app_code/requirements.txt",
     "venv_folderpath": ".venv",
     # endregion
 

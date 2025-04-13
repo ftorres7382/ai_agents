@@ -13,7 +13,6 @@ import subprocess
 import os
 import typing as t
 import time
-import re
 
 import config as C
 
@@ -71,6 +70,19 @@ def main():
     v_print(f"PASSED! '{python_command}' HAS the venv module installed")
     v_print()
 
+    # Python has to have the pip module installed
+    # Check to make sure the python version has pip installed
+    v_print(f"Checking that '{python_command}' has the pip module installed...")
+
+    command = f"{python_command} -m pip --version"
+    result = run_command(command, verbose=False, return_error=True)
+    if not isinstance(result, str):
+        print(f"ERROR! NO PIP MODULE DETECTED! {python_command} MUST have the pip module must be installed!")
+        quit(1)
+
+    v_print(f"PASSED! '{python_command}' HAS the pip module installed")
+    v_print()
+
 
     # endregion
 
@@ -123,6 +135,8 @@ def check_venv():
 
     If they differ, then delete the venv directory and try to install requirements to C.settings["venv_folderpath"].
     '''   
+    
+
     
     # Create the command that will do this
     commands = f"{venv_python_path} -m pip freeze"
@@ -209,60 +223,6 @@ def check_bash():
         print(f"ERROR! The command '{' '.join(command_list)}' did not give an error \
               but does not contain 'bash' in its first line. Instead it received: {result}")
         exit(1)
-
-def check_portaudio():
-    '''
-    This function makes sure the port audio is installed
-
-    sudo apt install pipewire pipewire-pulse wireplumber was also run to install things but I do not want to validate that right now
-    
-    systemctl --user stop pulseaudio.service
-    systemctl --user stop pulseaudio.socket
-
-    systemctl --user enable --now pipewire.service
-    systemctl --user enable --now pipewire-pulse.service
-    systemctl --user enable --now wireplumber.service
-
-    Re-started system
-
-    sudo apt install pulseaudio
-
-    sudo apt-get install jackd2
-    enabled real time process... something
-    
-    sudo apt-get install alsa-utils
-
-    sudo apt install multimedia-jack
-    pulseaudio --kill
-    jack_control start
-
-    sudo apt install jackd2
-
-    jack_control start
-
-    followed this thread https://github.com/Uberi/speech_recognition/issues/526
-    
-    Got fixded by just using sound device This whole check needs to be redone with a noew version of linux
-    '''
-    command = "dpkg -l | grep portaudio"
-    result = run_command(command)
-
-    # All expected regex must be found in the result
-    expected_regex = [
-        "libportaudio2",
-        "libportaudiocpp0",
-        "portaudio19-dev"
-    ]
-
-    passed = True
-    for pattern in expected_regex:
-        if not re.search(pattern, result):
-            passed =  False
-    if not passed:
-        print("ERROR! portaudio installs are required for the pyaudio module! \
-              Consider installing with 'sudo apt install portaudio19-dev python3-dev'. \
-              Check to see if you need to restart pulse audio and get jack control rinning")
-    return True
 
 
 
