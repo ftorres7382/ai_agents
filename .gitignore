@@ -11,6 +11,13 @@ assets/misc/*
 # Except the README
 !assets/misc/README.md
 
+# Let secrets be tracked
+!assets/secrets/
+# Do not track any files in secrets
+assets/secrets/*
+# Except the README
+!assets/secrets/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
