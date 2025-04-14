@@ -18,6 +18,13 @@ assets/secrets/*
 # Except the README
 !assets/secrets/README.md
 
+# Let the folder be tracked
+!assets/testing_ISO_files/
+# Do not track any files in the folder
+assets/testing_ISO_files/*
+# Except the README
+!assets/testing_ISO_files/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
