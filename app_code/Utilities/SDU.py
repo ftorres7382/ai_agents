@@ -1,16 +1,20 @@
 # Imports
 import sounddevice as sd # type: ignore
+import subprocess
+
+
 import typing as t
+from app_code.literals import VALID_PULSE_AUDIO_VALUES
 
 ##########################
 # Typed Dict Definitions
 ##########################
 # region: 
-class DEFAULT_DEVICES_INDEX_DICT_TYPE(t.TypedDict):
+class DEVICES_INDEX_DICT_TYPE(t.TypedDict):
     INPUT: int
     OUTPUT: int
 
-class DEFAULT_DEVICE_INFO_DICT_TYPE(t.TypedDict):
+class SD_DEVICE_INFO_DICT_TYPE(t.TypedDict):
     name: str
     index: int
     hostapi: int
@@ -22,15 +26,22 @@ class DEFAULT_DEVICE_INFO_DICT_TYPE(t.TypedDict):
     default_high_output_latency: float
     default_samplerate: float
 
-class DEFAULT_DEVICES_INFO_DICT_TYPE(t.TypedDict):
-    INPUT: DEFAULT_DEVICE_INFO_DICT_TYPE
-    OUTPUT: DEFAULT_DEVICE_INFO_DICT_TYPE
+class DEVICE_INFO_DICT_TYPE(SD_DEVICE_INFO_DICT_TYPE):
+    pulse_name:str
+
+class DEVICES_INFO_DICT_TYPE(t.TypedDict):
+    INPUT: DEVICE_INFO_DICT_TYPE
+    OUTPUT: DEVICE_INFO_DICT_TYPE
 # endregion
 
-class SDU:
 
+
+class SDU:
+    '''
+    The Sound Device Utility (SDU) class standardizes getting information and interacting with the host's audio devices. 
+    '''
     @classmethod
-    def get_default_devices_index(cls) -> DEFAULT_DEVICES_INDEX_DICT_TYPE:
+    def get_default_devices_index(cls) -> DEVICES_INDEX_DICT_TYPE:
         '''
         This class returns a dictionary with the indexes for the default input and output devices
         '''
@@ -43,199 +54,61 @@ class SDU:
         }
 
     @classmethod
-    def get_default_devices_info(cls) -> DEFAULT_DEVICES_INFO_DICT_TYPE:
+    def get_devices_info(cls, devices_index_dict: DEVICES_INDEX_DICT_TYPE) -> DEVICES_INFO_DICT_TYPE:
         '''
-        This function will use the get_default_devices_index to return the information for the default input and output devices
+        This function gets the information for a given input and output device index dictionary
         '''
-        # Get default device indexes
-        default_devices_indexes = cls.get_default_devices_index()
-        
-        # Get detailed information about the default input device
-        default_input_device_info: DEFAULT_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=default_devices_indexes['INPUT'], kind='input')
 
+        # Get detailed information about the default input device
+        sd_info_input: SD_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=devices_index_dict['INPUT'], kind='input')
+        
+        # Create a new DEVICE_INFO_DICT_TYPE from the SD_DEVICE_INFO_DICT_TYPE with an additional field
+        default_input_device_info: DEVICE_INFO_DICT_TYPE = {
+            **sd_info_input,
+            "pulse_name": cls.get_pulse_name(sd_info_input["name"], "sink")
+        }
+        
         # Get detailed information about the default output device
-        default_output_device_info: DEFAULT_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=default_devices_indexes['OUTPUT'], kind='output')
-        return_dict: DEFAULT_DEVICES_INFO_DICT_TYPE = {
-            "INPUT":default_input_device_info,
+        sd_info_output: SD_DEVICE_INFO_DICT_TYPE = sd.query_devices(device=devices_index_dict['OUTPUT'], kind='output')
+        
+        # Create a new DEVICE_INFO_DICT_TYPE from the SD_DEVICE_INFO_DICT_TYPE with an additional field
+        default_output_device_info: DEVICE_INFO_DICT_TYPE = {
+            **sd_info_output,
+            "pulse_name": cls.get_pulse_name(sd_info_output["name"], "source")
+        }
+        
+        # Make the return dict and return it
+        return {
+            "INPUT": default_input_device_info,
             "OUTPUT": default_output_device_info
         }
-        return return_dict
 
-
-
-
-
-
-
-# ##########################
-# # Typed Dict Definitions
-# ##########################
-# # region: 
-# class _DEFAULT_DEVICE_INDEXES_DICT_TYPE(t.TypedDict):
-#     INPUT: int
-#     OUTPUT: int
-
-# class _DEVICE_INFO_DICT_TYPE(t.TypedDict):
-#     index: int
-#     structVersion: int
-#     name: str
-#     hostApi: int
-#     maxInputChannels: int
-#     maxOutputChannels: int
-#     defaultLowInputLatency: float
-#     defaultLowOutputLatency: float
-#     defaultHighInputLatency: float
-#     defaultHighOutputLatency: float
-#     defaultSampleRate: int
-
-# class _DEFAULT_DEVICES_STREAM_DICT_TYPE(t.TypedDict):
-#     INPUT: pyaudio.Stream
-#     OUTPUT: pyaudio.Stream
-#     PYAUDIO: pyaudio.PyAudio
-
-# class _DEFAULT_DEVICES_INFO_DICT_TYPE(t.TypedDict):
-#     INPUT: _DEVICE_INFO_DICT_TYPE
-#     OUTPUT: _DEVICE_INFO_DICT_TYPE
-# # endregion
-
-
-# class SDU:
-#     '''
-#     This class is a helper class for streaming input and output audio
-#     '''
-
-#     @classmethod
-#     def close_streams(cls, streams_dict: _DEFAULT_DEVICES_STREAM_DICT_TYPE) -> None:
-#         '''
-#         This function will close and terminate all the streams in the dictionary
-#         '''
-#         streams_dict["INPUT"].stop_stream()
-#         streams_dict["INPUT"].close()
+    @classmethod
+    def get_pulse_name(cls, sd_name: str, pulse_audio_type: VALID_PULSE_AUDIO_VALUES) -> str:
+        '''
+        This class translates the sd name to the pulse audio name
         
-#         streams_dict["OUTPUT"].stop_stream()
-#         streams_dict["OUTPUT"].close()
+        Only the default is currently implemented
+        '''
+        if sd_name != "default":
+            raise NotImplementedError("ERROR! Non Default names have not been implemented yet!")
+        command = "pactl info | grep "+ f'"Default {pulse_audio_type[0].upper() + pulse_audio_type[1:]}"'
+        result = subprocess.run(command, capture_output=True, shell=True, text=True)
         
-#         streams_dict["PYAUDIO"].terminate()
-
-#     @classmethod
-#     def get_streaming_objects(cls, frames_per_buffer: int = 1024) -> _DEFAULT_DEVICES_STREAM_DICT_TYPE:
-#         '''
-#         This function returns the streaming objects for the default INPUT and OUTPUT.
-#         '''
-#         default_devices_info = cls.get_default_devices_info()
+        result_str: str = str(result.stdout).replace("\n", "")
         
-#         p = pyaudio.PyAudio()
+        final_result = result_str.split(": ")[-1]
         
-
-#         return_dict: _DEFAULT_DEVICES_STREAM_DICT_TYPE = {
-            
-#             "INPUT": p.open(
-#                 format=pyaudio.paInt16,
-#                 channels=default_devices_info["INPUT"]["maxInputChannels"],
-#                 rate=default_devices_info["INPUT"]['defaultSampleRate'],
-#                 input=True,
-#                 input_device_index=default_devices_info["INPUT"]["index"],
-#                 frames_per_buffer=frames_per_buffer
-#             ),
-#             "OUTPUT": p.open(
-#                 format=pyaudio.paInt16,
-#                 channels=default_devices_info["OUTPUT"]["maxOutputChannels"],
-#                 rate=int(default_devices_info["OUTPUT"]['defaultSampleRate']),
-#                 output=True,
-#                 output_device_index=default_devices_info["OUTPUT"]["index"],
-#                 frames_per_buffer=frames_per_buffer
-#             ),
-#             "PYAUDIO": p
-#         }
-#         return return_dict
-
-#     @classmethod
-#     def get_default_devices_info(cls) -> _DEFAULT_DEVICES_INFO_DICT_TYPE:
-#         '''
-#         Returns the default devices information using the other methods of the classes up until now
-#         '''
-#         indexes = cls.get_default_device_indexes()
         
+        return final_result
 
-#         result: _DEFAULT_DEVICES_INFO_DICT_TYPE = {
-#             "INPUT": cls.get_device_info_by_index(indexes["INPUT"]),
-#             "OUTPUT": cls.get_device_info_by_index(indexes["OUTPUT"])
-#         }
-
-#         return result
-    
-
-#     @classmethod
-#     def get_device_info_by_index(cls, index: int) -> _DEVICE_INFO_DICT_TYPE:
-#         '''
-#         Gets the dictionary settings for the device information, given the index
-#         '''
-#         p = pyaudio.PyAudio()
-
-#         raw_info = p.get_device_info_by_index(index)
-
-#         result: _DEVICE_INFO_DICT_TYPE = {
-#             'index': int(raw_info['index']),
-#             'structVersion': int(raw_info['structVersion']),
-#             'name': str(raw_info['name']),
-#             'hostApi': int(raw_info['hostApi']),
-#             'maxInputChannels': int(raw_info['maxInputChannels']),
-#             'maxOutputChannels': int(raw_info['maxOutputChannels']),
-#             'defaultLowInputLatency': float(raw_info['defaultLowInputLatency']),
-#             'defaultLowOutputLatency': float(raw_info['defaultLowOutputLatency']),
-#             'defaultHighInputLatency': float(raw_info['defaultHighInputLatency']),
-#             'defaultHighOutputLatency': float(raw_info['defaultHighOutputLatency']),
-#             'defaultSampleRate': int(raw_info['defaultSampleRate']),
-#         }
-
-#         return result
-
-
-
+    @classmethod
+    def overwrite_pulse_loopback(cls, ):
+        '''
+        This method overwrites whatever the current pulse config is with the one sent to it
         
+        The loopback created will combine INPUT and OUTPUT
+        '''
 
-    
-#     @classmethod
-#     def get_default_device_indexes(cls) -> _DEFAULT_DEVICE_INDEXES_DICT_TYPE:
-#         '''
-#         This class returns the default audio device indexes for both input and output 
-#         '''
-#         p = pyaudio.PyAudio()
 
-#         default_input_index = p.get_default_input_device_info()['index']
-#         default_input_index = int(default_input_index)
 
-#         default_output_index = p.get_default_output_device_info()['index']
-#         default_output_index = int(default_output_index)
-#         p.terminate()
-
-#         result_dict : _DEFAULT_DEVICE_INDEXES_DICT_TYPE = {
-#             "INPUT": default_input_index,
-#             "OUTPUT": default_output_index
-#         }
-#         return result_dict
-    
-#     @classmethod
-#     def get_devices_info(cls) -> t.List[t.Any]:
-#         '''
-#         Gets the information for all devices
-        
-#         Returns:
-#             A list of dictionaries containing the device information, where each dictionary
-#             corresponds to a device and contains keys like 'name', 'index', 'maxInputChannels', etc.
-#         '''
-#         p = pyaudio.PyAudio()
-#         devices_info = []
-
-#         for i in range(p.get_device_count()):
-#             device_info = p.get_device_info_by_index(i)
-#             devices_info.append({
-#                 'name': device_info['name'],
-#                 'index': device_info['index'],
-#                 'maxInputChannels': device_info['maxInputChannels'],
-#                 'maxOutputChannels': device_info['maxOutputChannels'],
-#                 'defaultSampleRate': device_info['defaultSampleRate']
-#             })
-
-#         p.terminate()
-#         return devices_info

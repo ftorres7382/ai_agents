@@ -6,4 +6,7 @@ VALID_MODEL_NAMES = t.Literal[
     "qwen2.5-coder"
 ]
 
-
+VALID_PULSE_AUDIO_VALUES = t.Literal[
+    "sink",
+    "source"
+]

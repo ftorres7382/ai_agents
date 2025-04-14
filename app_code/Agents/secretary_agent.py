@@ -16,7 +16,11 @@ class secretary_agent(base_agent):
         '''
         This command starts the model
         '''
-        default_devices_info = SDU.get_default_devices_info()
+        default_devices_index = SDU.get_default_devices_index()
+        default_devices_info = SDU.get_devices_info(default_devices_index)
+
+        # Set the pulse audio loopback
+        
 
         print(default_devices_info)
 

@@ -34,6 +34,12 @@ class SETTINGS_DICT(t.TypedDict):
     complete_ollama_api_url: t.Optional[str]
     # endregion
 
+    ##########################
+    # Sound Settings
+    ##########################
+    # region:
+    combined_audio_sink_name: str
+    # endregion
 
     ##########################
     # Agents Settings
@@ -62,6 +68,13 @@ settings: SETTINGS_DICT = {
 
     # This will be completely filled in later
     "complete_ollama_api_url": None,
+    # endregion
+
+    ##########################
+    # Sound Settings
+    ##########################
+    # region:
+    "combined_audio_sink_name": "ai_agents_combined_sink",
     # endregion
 
     ##########################
