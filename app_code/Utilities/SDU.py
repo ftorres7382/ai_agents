@@ -1,6 +1,9 @@
 # Imports
-import sounddevice as sd # type: ignore
-from dataclasses import dataclass
+import sounddevice as sd # type: ignore[import-untyped]
+import subprocess
+import time
+import queue
+import threading
 
 
 import typing as t
@@ -33,6 +36,11 @@ class DEVICE_INFO_DICT_TYPE(SD_DEVICE_INFO_DICT_TYPE):
 class DEVICES_INFO_DICT_TYPE(t.TypedDict):
     INPUT: DEVICE_INFO_DICT_TYPE
     OUTPUT: DEVICE_INFO_DICT_TYPE
+
+class STREAM_DICT_TYPE(t.TypedDict):
+    stream_obj: subprocess.Popen[bytes]
+    queue: queue.Queue[bytes | None]
+
 # endregion
 
 
@@ -85,15 +93,61 @@ class SDU(PLSU):
         }
 
     @classmethod
-    def start_stream(cls, device_name: str, to_file:bool = False, overwrite:bool=True)-> None:
+    def start_stream_subprocess(cls, device_name: str)-> subprocess.Popen[bytes]:
         '''
         This function returns the subprocess that has the currently running stream using ffmpeg
+        '''        
+        ffmpeg_proc = subprocess.Popen([
+            "ffmpeg",
+            "-y",                    # Overwrite output file without asking
+            "-f", "pulse",           # PulseAudio input
+            "-i", device_name,  # Your monitor source
+            "-f", "mp3",             # Output format (MP3)
+            "-",                     # Output to stdout (pipe)
+        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+
+        # Wait for a few seconds to ensure recording has started
+        time.sleep(2)
+
+        return ffmpeg_proc
+
+    @classmethod
+    def start_stream(cls, device_name: str, chunk_size: int = 1024) -> STREAM_DICT_TYPE:
         '''
-        if not overwrite:
-            raise NotImplementedError("ERROR! overwrite=False has not been implemented yet!")
+        Returns the stream subprocess and the queque of the stream's data
+        '''
+        q: queue.Queue[bytes | None] = queue.Queue()
+        stream_subprocess = cls.start_stream_subprocess(device_name)
+
+        def reader_thread() -> None:
+            while True:
+                stdout = t.cast(t.IO[bytes], stream_subprocess.stdout)
+                chunk = stdout.read(chunk_size)
+                if not chunk:
+                    break
+                q.put(chunk)
+            stdout.close()
+            q.put(None)
+
+        threading.Thread(target=reader_thread, daemon=True).start()
+        return {
+            "queue":q,
+            "stream_obj": stream_subprocess
+        }
+
+
+    @classmethod
+    def stop_stream(cls, stream_dict: STREAM_DICT_TYPE) -> None:
+        '''
+        This method grecefully stops the stream
+        '''
+        stream_obj = stream_dict["stream_obj"]
+        try:
+            stream_obj.terminate()
+            stream_obj.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            stream_obj.kill()
         
-        if to_file:
-            raise NotImplementedError("ERROR! to_file=True has not been implemented yet!")
         
 
 

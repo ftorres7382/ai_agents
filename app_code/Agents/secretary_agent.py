@@ -1,6 +1,6 @@
 import sounddevice as sd # type: ignore[import-untyped]
 from dataclasses import dataclass
-import numpy as np
+import time
 
 from .base_agent import base_agent
 from app_code.Utilities import SDU, PLSU
@@ -32,5 +32,22 @@ class secretary_agent(base_agent):
             C.settings['combined_audio_sink_name'],
             dry_run=True
             )
+        
+        # Start the stream
+        audio_stream_dict = SDU.start_stream(
+            f"{C.settings['combined_audio_sink_name']}.monitor"
+        )
+        start_time = time.time()
+        end_sec = 10
+        while (time.time() - start_time) <= end_sec:
+            chunk = audio_stream_dict['queue'].get()
+            if chunk is None:
+                break
+            print(f"Got audio chunk of size: {len(chunk)}")
+        
+        SDU.stop_stream(audio_stream_dict)
+
+
+
 
 
