@@ -18,4 +18,7 @@
 <!-- The program sets up the audio and input loopback using something like this -->
 - pactl load-module module-null-sink sink_name=ai_agents_combined_sink sink_properties=device.description=Both-mic-and-speakers
 
+sudo apt install ffmpeg
+
+
 

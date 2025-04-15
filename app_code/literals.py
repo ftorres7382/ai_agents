@@ -5,8 +5,3 @@ VALID_MODEL_NAMES = t.Literal[
     "deepseek-r1:14b",
     "qwen2.5-coder"
 ]
-
-VALID_PULSE_AUDIO_VALUES = t.Literal[
-    "sink",
-    "source"
-]
