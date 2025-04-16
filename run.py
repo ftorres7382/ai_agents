@@ -328,21 +328,19 @@ def check_python():
         return True
 
     python_command = "python3.12"
-    result, reason = check_python_command()
+    result = check_python_command()
     if result: 
         return True
     
     print(f"'{python_command}' command check failed, trying python3")    
 
     python_command = "python3"
-    result, reason = check_python_command()
+    result = check_python_command()
     if result: 
         return True
 
-    if reason == "Wrong Version":
-        print()
     # Python 3.12 is not available, print error and exit
-    print("ERROR! Neither 'python3.12' or 'python3' (pointing to a python3.12 version) commands . Please install Python 3.12!")
+    print("ERROR! Neither 'python3.12' or 'python3' (pointing to a python3.12 version) commands meet requirements! Please install Python 3.12!")
     sys.exit(1)
 
 def check_venv_module():
