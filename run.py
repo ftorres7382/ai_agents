@@ -18,17 +18,17 @@ import shutil
 # Set starting values to the global variables
 verbose_build = None
 skip_checks = None
-python_command = ""
-venv_python_path = ""
+python_command = None
+venv_python_path = None
 supported_os_pretty_names = [
     # Use the pretty names from platform.freedesktop_os_release()
     "Debian GNU/Linux 12 (bookworm)",
     # "Linux Mint 22" # Needs to be tested at a later date!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ]
 supported_os: t.Union[bool, None] = None
-config_name = ""
-template_config_filepath = ""
-config_filepath = ""
+config_name = "config"
+template_config_filepath = config_name + "_template.py"
+config_filepath = template_config_filepath.replace("_template.py", ".py")
 
 def main():
     '''
@@ -70,21 +70,13 @@ def main():
     check_config()
     v_print("PASSED! The config file can now be found!")
 
-    import config as C
-
-    # Global variable to track verbosity
-    verbose_build = False
-    skip_checks = False
+    # Set the globla variables that needed the config file
+    import config as C    
     python_command = None
     venv_python_path = os.path.join(
         C.settings["venv_folderpath"],
         "bin/python3"    
     )
-
-    supported_os_pretty_names = [
-        # 'Linux Mint', # Coming soon...
-    ]
-
 
     # Must be Linux OS
     v_print("Checking that the OS is Linux...")
@@ -235,11 +227,13 @@ def make_initial_venv_folder():
 # region: 
 def check_minimum_python():
     '''
-    This module checks to make sure the python has the minimum 
+    This module checks to make sure the python has the minimum requirements
     '''
     python_major_version = sys.version_info.major
-    print(python_major_version)
-    quit()
+    if python_major_version != 3:
+        print("ERROR! Python version must be at least Python3!")
+        print("Please install the following supported python versions: Python3.12")
+        quit()
 
 def check_config():
     '''
@@ -247,12 +241,10 @@ def check_config():
     At first it will just make sure the file exists, in the long run it can validate that the settings are right
     '''
     global config_name, template_config_filepath, config_filepath
-    config_name = "config"
-    template_config_filepath = f"{config_name}_template.py"
-    config_filepath = template_config_filepath.replace("_template.py", ".py")
+
     if not os.path.exists(config_filepath):
         print("Configuration file was not detected.")
-        print("Starting with default settings...")
+        print("Setting up default configuration...")
         shutil.copyfile(config_filepath, config_filepath)
 
 
