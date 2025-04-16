@@ -1,5 +1,7 @@
 # Ignore anything in assets by default
 assets/*
+# Ignore config file
+./config.py
 
 # Let docs be tracked
 !assets/docs/
