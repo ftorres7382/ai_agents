@@ -20,8 +20,12 @@ verbose_build = None
 skip_checks = None
 python_command = ""
 venv_python_path = ""
-install_supported_distro_list = []
-supported_os = None
+supported_os_pretty_names = [
+    # Use the pretty names from platform.freedesktop_os_release()
+    "Debian GNU/Linux 12 (bookworm)",
+    # "Linux Mint 22" # Needs to be tested at a later date!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+]
+supported_os: t.Union[bool, None] = None
 config_name = ""
 template_config_filepath = ""
 config_filepath = ""
@@ -35,6 +39,7 @@ def main():
     '''
     global C
     global skip_checks
+    global supported_os
     if skip_checks:
             
         from app_code.main import run as run_app
@@ -51,14 +56,10 @@ def main():
     # region:
     # Check if the OS is supported
     info = platform.freedesktop_os_release()
-    print(info)
-    print("Name:", info.get("NAME"))
-    print("Version:", info.get("VERSION"))
+    if info["PRETTY_NAME"] in supported_os_pretty_names:
+        supported_os = True
 
-    quit()
-
-
-    # This script needs at least python3
+    # This script also has requirements to be able to run
     v_print("Checking the minimum python that is running this script...")
     check_minimum_python()
     v_print("PASSED! The python running this script has the minimum requirements!")
@@ -79,7 +80,7 @@ def main():
         "bin/python3"    
     )
 
-    install_supported_distro_list = [
+    supported_os_pretty_names = [
         # 'Linux Mint', # Coming soon...
     ]
 
@@ -233,8 +234,11 @@ def make_initial_venv_folder():
 # region: 
 def check_minimum_python():
     '''
-    This module checks to make sure the python has the minmum 
+    This module checks to make sure the python has the minimum 
     '''
+    python_major_version = sys.version_info.major
+    print(python_major_version)
+    quit()
 
 def check_config():
     '''
