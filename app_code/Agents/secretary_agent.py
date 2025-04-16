@@ -119,7 +119,24 @@ class secretary_agent(base_agent):
                 time.sleep(.5)
         
         # Note use SpeechBrain VAD, ASR, speaker ID. Check it out later
+        # Or just use faster whisper
+        '''
+        pip install faster-whisper
+        
+        from faster_whisper import WhisperModel
 
+        model = WhisperModel("base", compute_type="int8")  # or "small", "medium"
+        segments, info = model.transcribe("audio.wav", vad_filter=True)
+
+        for segment in segments:
+            print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
+
+        Buut SpeechBrain Has built-in speaker diarization pipeline:
+        from speechbrain.pretrained import SpeakerDiarization
+        diarize = SpeakerDiarization.from_hparams("speechbrain/speaker-diarization")
+        segments = diarize("audio.wav")
+
+        '''
 
 
         SDU.stop_stream(audio_stream_dict)
