@@ -50,14 +50,9 @@ def main():
     ##########################
     # region:
     # Check if the OS is supported
-    import platform
-
-    print("System:", platform.system())         # e.g. 'Windows', 'Linux', 'Darwin'
-    print("Node:", platform.node())             # Hostname
-    print("Release:", platform.release())       # OS version (e.g., '10' or '22.04')
-    print("Version:", platform.version())       # Detailed version
-    print("Machine:", platform.machine())       # Machine type (e.g., 'x86_64')
-    print("Processor:", platform.processor())   # Processor name
+    info = platform.freedesktop_os_release()
+    print("Name:", info.get("NAME"))
+    print("Version:", info.get("VERSION"))
 
     quit()
 
