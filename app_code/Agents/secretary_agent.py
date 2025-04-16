@@ -73,6 +73,7 @@ class secretary_agent(base_agent):
         This command starts the model
         '''
         self.print("Starting scretary agent...\n")
+        return
 
         self.print("Checking/Setting up data folder...\n")
         self.data_folder_setup()

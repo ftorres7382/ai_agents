@@ -41,6 +41,8 @@ def main():
     global skip_checks
     global supported_os
     global supported_os_pretty_names
+    global python_command
+    global venv_python_path
     if skip_checks:
             
         from app_code.main import run as run_app
@@ -55,6 +57,7 @@ def main():
     # System level checks
     ##########################
     # region:
+    print("Checking if the host meets the program minimum requirements...\n")
     # Check if the OS is supported
     info = platform.freedesktop_os_release()
     if info["PRETTY_NAME"] in supported_os_pretty_names:
@@ -72,7 +75,6 @@ def main():
 
     # Set the globla variables that needed the config file
     import config as C    
-    python_command = None
     venv_python_path = os.path.join(
         C.settings["venv_folderpath"],
         "bin/python3"    
@@ -166,7 +168,7 @@ def check_venv():
 
     If they differ, then delete the venv directory and try to install requirements to C.settings["venv_folderpath"].
     '''   
-    
+    global venv_python_path    
 
     
     # Create the command that will do this
@@ -248,27 +250,18 @@ def check_config():
         shutil.copyfile(template_config_filepath, config_filepath)
 
 
-def get_os_info():
-    info = {}
-    with open("/etc/os-release") as f:
-        for line in f:
-            if "=" in line:
-                key, value = line.strip().split("=", 1)
-                info[key] = value.strip('"')
-    return info
-
 def check_os():
     '''
     Checks if the OS is a linux distribution
     If not, it will print an ERROR! and exit the program
+
+    This function will NOT instantiate the supported_os variable, since it should be instantiated as soon as possible in the script
     '''
-    os_info = get_os_info()
-    if os_info["NAME"] in install_supported_distro_list:
-        raise NotImplementedError("ERROR! This has not been implemented yet!")
-    
-    if platform.system().lower() != "linux":
+    # Make sure the platform is linux
+    if platform.system() != "Linux":
         print("ERROR! This script can only be run on a Linux distribution.")
         sys.exit(1)
+
 
 def check_bash():
     '''
