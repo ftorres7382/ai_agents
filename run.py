@@ -51,6 +51,7 @@ def main():
     # region:
     # Check if the OS is supported
     info = platform.freedesktop_os_release()
+    print(info)
     print("Name:", info.get("NAME"))
     print("Version:", info.get("VERSION"))
 
