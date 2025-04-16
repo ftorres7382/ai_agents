@@ -12,6 +12,12 @@ class PLSU:
     '''
     The purpose of this class us to handle any operations that involve pulse audio
     '''
+    # TODO:
+    # Add get_devices info
+    # Add get_sinks_info
+    # Add get_sources_info?
+
+
     @classmethod
     def get_pulse_name(cls, sd_name: str, pulse_audio_type: VALID_PULSE_AUDIO_VALUES) -> str:
         '''
@@ -23,7 +29,7 @@ class PLSU:
             raise NotImplementedError("ERROR! Non Default names have not been implemented yet!")
         #                                           Set the firs char to uppercase, remove the 's' at the end of the name
         command = "pactl info | grep "+ f'"Default {pulse_audio_type[0].upper() + pulse_audio_type[1:-1]}"'
-        print(command)
+
         result = subprocess.run(command, capture_output=True, shell=True, text=True)
         
         result_str: str = str(result.stdout).replace("\n", "")
@@ -60,7 +66,7 @@ class PLSU:
         
 
     @classmethod
-    def overwrite_combined_pulse_loopback(cls, input_pulse_name: str, output_pulse_name: str, loopback_name: str, dry_run: bool = False) -> None:
+    def overwrite_combined_pulse_loopback(cls, input_pulse_name: str, output_pulse_name: str, loopback_name: str) -> None:
         '''
         This method overwrites whatever the current pulse config is with the one sent to it
         If the pulse config already exists, it will delete it by finding its id using 'pactl list sinks short' and the loopback_name 
@@ -84,12 +90,27 @@ class PLSU:
 
         # Create the new module        
         create_null_sink_command = f"pactl load-module module-null-sink sink_name={loopback_name} sink_properties=device.description=SilentSink"
-        
         subprocess.run(create_null_sink_command, capture_output=True, shell=True)
+        
+        # Add output monitor        
+        command = f"pactl load-module module-loopback source={output_pulse_name}.monitor sink={loopback_name}"
+        subprocess.run(command, capture_output=True, shell=True)
 
-        for source_name in [input_pulse_name, output_pulse_name]:
-            command = f"pactl load-module module-loopback source={source_name} sink={loopback_name}"
-            subprocess.run(command, capture_output=True, shell=True)
+        # Add input monitor
+        command = f"pactl load-module module-loopback source={input_pulse_name} sink={loopback_name}"
+        subprocess.run(command, capture_output=True, shell=True)
+
+    @classmethod
+    def listen_echo(cls, loopback_name: str, output_pulse_name: t.Union[str, None] = None, interactive:bool = False) -> None:
+        '''
+        This function starts up an echo of the loopack to the output device specified
+
+        If interactive is turned on, it will display a menu to control which device the loopback will go through
+        '''
+        if not interactive:
+            raise NotImplementedError("ERROR! The non interactive code has not been completed!")
+        else:
+            raise NotImplementedError("ERROR! The interactive code has not been completed!")
 
 
     

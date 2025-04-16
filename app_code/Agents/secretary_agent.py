@@ -88,9 +88,9 @@ class secretary_agent(base_agent):
         SDU.overwrite_combined_pulse_loopback(
             default_devices_info['INPUT']['pulse_name'], 
             default_devices_info['OUTPUT']['pulse_name'],
-            C.settings['combined_audio_sink_name'],
-            dry_run=True
+            C.settings['combined_audio_sink_name']
             )
+        
         
         # Start the stream
         audio_dirpath = os.path.join(C.settings["save_folder_path"], "secretary_agent", "audio_recordings", "raw")
@@ -100,13 +100,13 @@ class secretary_agent(base_agent):
     
         audio_stream_dict = SDU.start_stream(
             f"{C.settings['combined_audio_sink_name']}.monitor",
-            start_queue_stream=False,
+            start_queue_stream=True,
             start_filestream=True,
             filestream_filepath=audio_filepath,
             verbose=self.verbose
         )
         start_time = time.time()
-        end_sec = 2
+        end_sec = 10
         while (time.time() - start_time) <= end_sec:
             if audio_stream_dict["queue"] is not None:
                 chunk = audio_stream_dict['queue'].get()
@@ -118,6 +118,10 @@ class secretary_agent(base_agent):
                 print("Sleeping...")
                 time.sleep(.5)
         
+        # Note use SpeechBrain VAD, ASR, speaker ID. Check it out later
+
+
+
         SDU.stop_stream(audio_stream_dict)
 
 

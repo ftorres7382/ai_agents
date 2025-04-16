@@ -138,7 +138,6 @@ class SDU(PLSU):
             filepath                 # Output to file
 
         ]
-        print(" ".join(commands_list))
         ffmpeg_proc = subprocess.Popen(commands_list, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
         # Wait for a few seconds to ensure recording has started
@@ -159,6 +158,16 @@ class SDU(PLSU):
                      ) -> STREAM_DICT_TYPE:
         '''
         Returns the stream subprocess and the queque of the stream's data
+        '''
+
+        # TODO: Add something later that can record the input, output and the combined all in separate files later...
+        '''
+        ffmpeg \
+            -f pulse -i alsa_output.pci-0000_00_1b.0.analog-stereo.monitor \
+            -f pulse -i alsa_input.usb-YourMicName \
+            -filter_complex "[0:a]asetpts=PTS-STARTPTS[a1]; [1:a]asetpts=PTS-STARTPTS[a2]" \
+            -map "[a1]" output.wav \
+            -map "[a2]" input.wav
         '''
         
         if not start_filestream and not start_queue_stream:
