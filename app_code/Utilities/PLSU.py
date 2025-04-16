@@ -21,7 +21,9 @@ class PLSU:
         '''
         if sd_name != "default":
             raise NotImplementedError("ERROR! Non Default names have not been implemented yet!")
-        command = "pactl info | grep "+ f'"Default {pulse_audio_type[0].upper() + pulse_audio_type[1:]}"'
+        #                                           Set the firs char to uppercase, remove the 's' at the end of the name
+        command = "pactl info | grep "+ f'"Default {pulse_audio_type[0].upper() + pulse_audio_type[1:-1]}"'
+        print(command)
         result = subprocess.run(command, capture_output=True, shell=True, text=True)
         
         result_str: str = str(result.stdout).replace("\n", "")

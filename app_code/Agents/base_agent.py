@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import typing as t
 
 from dataclasses import dataclass
 from app_code.literals import VALID_MODEL_NAMES
@@ -13,6 +14,11 @@ class base_agent(ABC):
     '''
     name: str
     model_name: VALID_MODEL_NAMES
+    verbose: bool = True
+
+    def print(self, value: t.Any) -> None:
+        if self.verbose:
+            print(value)
 
     @abstractmethod
     def start(self) -> None:

@@ -4,7 +4,7 @@ import subprocess
 import time
 import queue
 import threading
-
+import os
 
 import typing as t
 from .PLSU import PLSU
@@ -38,8 +38,10 @@ class DEVICES_INFO_DICT_TYPE(t.TypedDict):
     OUTPUT: DEVICE_INFO_DICT_TYPE
 
 class STREAM_DICT_TYPE(t.TypedDict):
-    stream_obj: subprocess.Popen[bytes]
-    queue: queue.Queue[bytes | None]
+    queue: t.Union[queue.Queue[bytes | None], None]
+    stream_obj: t.Union[subprocess.Popen[bytes], None]
+    filestream_obj: t.Union[subprocess.Popen[bytes], None]
+    
 
 # endregion
 
@@ -85,6 +87,7 @@ class SDU(PLSU):
             **sd_info_output,
             "pulse_name": cls.get_pulse_name(sd_info_output["name"], "sources")
         }
+
         
         # Make the return dict and return it
         return {
@@ -93,7 +96,7 @@ class SDU(PLSU):
         }
 
     @classmethod
-    def start_stream_subprocess(cls, device_name: str)-> subprocess.Popen[bytes]:
+    def start_stream_subprocess(cls, device_name: str, wait_after_start:bool = True)-> subprocess.Popen[bytes]:
         '''
         This function returns the subprocess that has the currently running stream using ffmpeg
         '''        
@@ -107,32 +110,96 @@ class SDU(PLSU):
         ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
 
         # Wait for a few seconds to ensure recording has started
-        time.sleep(2)
+        if wait_after_start:
+            time.sleep(2)
+
+        return ffmpeg_proc
+    
+    @classmethod
+    def start_filestream_subprocess(cls, device_name:str, filepath:str, wait_after_start:bool = True) -> subprocess.Popen[bytes]:
+        '''
+        This function returns the subprocess that has the currently running stream that saves to a file using ffmpeg
+        '''  
+        # Make sure that you can create a file there
+        try:
+            with open(filepath, 'w') as f:
+                f.write("testing")
+        except Exception as e:
+            raise ValueError(f"ERROR! An error occured when testing write access using a dummy file. Error message: {e} ")
+
+        # If here, remove the dummy file
+        os.remove(filepath)
+        commands_list = [
+            "ffmpeg",
+            "-y",                    # Overwrite output file without asking
+            "-f", "pulse",           # PulseAudio input
+            "-i", device_name,       # Your monitor source
+            "-f", "mp3",             # Output format (MP3)
+            filepath                 # Output to file
+
+        ]
+        print(" ".join(commands_list))
+        ffmpeg_proc = subprocess.Popen(commands_list, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Wait for a few seconds to ensure recording has started
+        if wait_after_start:
+            time.sleep(2)
 
         return ffmpeg_proc
 
     @classmethod
-    def start_stream(cls, device_name: str, chunk_size: int = 1024) -> STREAM_DICT_TYPE:
+    def start_stream(cls, 
+                     device_name: str, 
+                     chunk_size: int = 1024, 
+                     start_queue_stream:bool = True,
+                     start_filestream: bool = False, 
+                     filestream_filepath: t.Union[str, None] = None, 
+                     wait_after_start:bool = True,
+                     verbose:bool = True
+                     ) -> STREAM_DICT_TYPE:
         '''
         Returns the stream subprocess and the queque of the stream's data
         '''
-        q: queue.Queue[bytes | None] = queue.Queue()
-        stream_subprocess = cls.start_stream_subprocess(device_name)
+        
+        if not start_filestream and not start_queue_stream:
+            raise ValueError("ERROR! Please start a queue or filestream!")
+        
+        # Set starting values
+        q: t.Union[queue.Queue[bytes | None], None] = None
+        stream_obj: t.Union[subprocess.Popen[bytes], None] = None
+        filestream_obj: t.Union[subprocess.Popen[bytes], None] = None
 
-        def reader_thread() -> None:
-            while True:
-                stdout = t.cast(t.IO[bytes], stream_subprocess.stdout)
-                chunk = stdout.read(chunk_size)
-                if not chunk:
-                    break
-                q.put(chunk)
-            stdout.close()
-            q.put(None)
+        if start_queue_stream:
+            cls.print("Starting Queue stream...", verbose)
+            q = queue.Queue()
+            stream_obj = cls.start_stream_subprocess(device_name, wait_after_start=True)
+            def reader_thread() -> None:
+                while True:
+                    stdout = t.cast(t.IO[bytes], stream_obj.stdout)
+                    chunk = stdout.read(chunk_size)
+                    if not chunk:
+                        break
+                    q.put(chunk)
+                stdout.close()
+                q.put(None)
 
-        threading.Thread(target=reader_thread, daemon=True).start()
+            threading.Thread(target=reader_thread, daemon=True).start()
+        
+
+        if start_filestream:
+            cls.print("Starting Filestream",verbose)
+            if not isinstance(filestream_filepath, str):
+                raise ValueError("ERROR! start_filestream is True but filestream_filepath is None!")
+            filestream_obj = cls.start_filestream_subprocess(device_name, filestream_filepath, wait_after_start=False)
+
+        
+        if wait_after_start:
+            time.sleep(2)
+
         return {
             "queue":q,
-            "stream_obj": stream_subprocess
+            "stream_obj": stream_obj,
+            "filestream_obj": filestream_obj
         }
 
 
@@ -141,15 +208,22 @@ class SDU(PLSU):
         '''
         This method grecefully stops the stream
         '''
-        stream_obj = stream_dict["stream_obj"]
-        try:
-            stream_obj.terminate()
-            stream_obj.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            stream_obj.kill()
+        keys_list: t.List[t.Literal["stream_obj", "filestream_obj"]]= ["stream_obj", "filestream_obj"]
+        for key in keys_list:
+            stream_obj = stream_dict[key]
+            if stream_obj is None:
+                continue
+            try:
+                stream_obj.terminate()
+                stream_obj.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                stream_obj.kill()
         
         
-
+    @classmethod
+    def print(cls, value:t.Any, verbose: bool = True) -> None:
+        if verbose:
+            print(value)
 
 
 
