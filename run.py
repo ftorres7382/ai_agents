@@ -340,7 +340,14 @@ def check_python():
         return True
     print()
     # Python 3.12 is not available, print error and exit
-    print("ERROR! Neither 'python3.12' or 'python3' commands meet requirements! Please install Python 3.12!")
+    print("ERROR! Neither 'python3.12' or 'python3' commands meet program requirements!")
+    if supported_os:
+       print("Supported OS Detected...")
+       result = input("Would you like the program to install Python3.12 automatically? (y/n): ")
+       result = result.lower()
+       if result == "y":
+           raise NotImplementedError("ERROR! Automatic install of Ptyhon3.12 has not been implemented yet!") 
+    print("Please install Python 3.12!")
     sys.exit(1)
 
 def check_venv_module():
