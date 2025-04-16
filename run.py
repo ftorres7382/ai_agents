@@ -40,6 +40,7 @@ def main():
     global C
     global skip_checks
     global supported_os
+    global supported_os_pretty_names
     if skip_checks:
             
         from app_code.main import run as run_app
