@@ -33,6 +33,8 @@ def main():
     Any missing requirements or content will be checked by the main code.
     The main code is in a way better position to do checks since it will have all modules installed and available
     '''
+    global C
+    global skip_checks
     if skip_checks:
             
         from app_code.main import run as run_app
@@ -42,7 +44,7 @@ def main():
     
 
     print()
-    global C
+    
     ##########################
     # System level checks
     ##########################
