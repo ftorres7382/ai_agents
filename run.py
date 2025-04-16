@@ -245,7 +245,7 @@ def check_config():
     if not os.path.exists(config_filepath):
         print("Configuration file was not detected.")
         print("Setting up default configuration...")
-        shutil.copyfile(config_filepath, config_filepath)
+        shutil.copyfile(template_config_filepath, config_filepath)
 
 
 def get_os_info():
