@@ -59,7 +59,7 @@ def main():
     print("Machine:", platform.machine())       # Machine type (e.g., 'x86_64')
     print("Processor:", platform.processor())   # Processor name
 
-    wuit()
+    quit()
 
 
     # This script needs at least python3
