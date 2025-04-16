@@ -295,39 +295,54 @@ def check_python():
     v_prints will be used to print the messages along the way.
     '''
     global python_command
-
-    def check_python_command():
+    
+    def check_python_command() -> bool:
         '''
         This function will check the requriements given the current global python command
         '''
+        PYTHON_COMMAND_FAIL_REASONS: t.TypeAlias = t.Literal[
+            "",
+            "Not Installed",
+            "Wrong Version"
+        ]
+        reason: PYTHON_COMMAND_FAIL_REASONS = ""
         v_print(f"Checking for {python_command} CLI command...")
 
         command_list = [python_command, '--version']
         result = run_command(command_list, return_error=True, verbose=False)
 
         if not isinstance(result, str):
-            v_print(f"{python_command} is not installed...")
-            return False
-
+            reason = "Not Installed"
 
         # The command ran successfully, but check that it is python 3.12
-        if 'Python 3.12' in result:
-            v_print(f"Python 3.12 found using '{' '.join(command_list)}' command.")
-            return True
-        else:
-            v_print(f"{python_command} does not point to a Python 3.12 version")
+        elif 'Python 3.12' not in result:
+            reason = "Wrong Version"
+        
+        if reason == "Not Installed":
+            print(f"'{python_command}' was not detected, trying python3...")
             return False
+        elif reason == "Wrong Version":
+            print(f"'{python_command}' is available but does not point to a python3.12 version...")
+            return False
+        
+        return True
 
     python_command = "python3.12"
-    if check_python_command(): 
+    result, reason = check_python_command()
+    if result: 
         return True
     
+    print(f"'{python_command}' command check failed, trying python3")    
+
     python_command = "python3"
-    if check_python_command():
+    result, reason = check_python_command()
+    if result: 
         return True
 
+    if reason == "Wrong Version":
+        print()
     # Python 3.12 is not available, print error and exit
-    print("ERROR! Neither python3.12 or python3 (pointing to a python3.12 version) commands are available. Please install Python 3.12!")
+    print("ERROR! Neither 'python3.12' or 'python3' (pointing to a python3.12 version) commands . Please install Python 3.12!")
     sys.exit(1)
 
 def check_venv_module():
