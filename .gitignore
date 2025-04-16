@@ -25,6 +25,13 @@ assets/testing_ISO_files/*
 # Except the README
 !assets/testing_ISO_files/README.md
 
+# Let the folder be tracked
+!assets/data/
+# Do not track any files in the folder
+assets/data/*
+# Except the README
+!assets/data/README.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

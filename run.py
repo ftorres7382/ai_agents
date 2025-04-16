@@ -25,6 +25,11 @@ venv_python_path = os.path.join(
     "bin/python3"    
 )
 
+install_supported_distro_list = [
+    # 'Linux Mint', # Coming soon...
+]
+
+
 def main():
     '''
     Checks for the minimum needed to create the virtual environment, install the dependencies and run the project
@@ -194,11 +199,24 @@ def make_initial_venv_folder():
 # System level checks
 ##########################
 # region: 
+def get_os_info():
+    info = {}
+    with open("/etc/os-release") as f:
+        for line in f:
+            if "=" in line:
+                key, value = line.strip().split("=", 1)
+                info[key] = value.strip('"')
+    return info
+
 def check_os():
     '''
     Checks if the OS is a linux distribution
     If not, it will print an ERROR! and exit the program
     '''
+    os_info = get_os_info()
+    if os_info["NAME"] in install_supported_distro_list:
+        raise NotImplementedError("ERROR! This has not been implemented yet!")
+    
     if platform.system().lower() != "linux":
         print("ERROR! This script can only be run on a Linux distribution.")
         sys.exit(1)

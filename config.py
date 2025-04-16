@@ -35,10 +35,11 @@ class SETTINGS_DICT(t.TypedDict):
     # endregion
 
     ##########################
-    # Sound Settings
+    # Sound & System Settings
     ##########################
     # region:
     combined_audio_sink_name: str
+    save_folder_path: str
     # endregion
 
     ##########################
@@ -71,10 +72,11 @@ settings: SETTINGS_DICT = {
     # endregion
 
     ##########################
-    # Sound Settings
+    # Sound & System Settings
     ##########################
     # region:
     "combined_audio_sink_name": "ai_agents_combined_sink",
+    "save_folder_path": "./assets/data"
     # endregion
 
     ##########################
