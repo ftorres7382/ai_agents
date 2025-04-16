@@ -187,7 +187,7 @@ def make_initial_venv_folder():
     '''
 
     if not os.path.exists(C.settings["venv_folderpath"]):
-        print(f"Creating virtual environment folder at {C.settings["venv_folderpath"]}...")
+        print(f"Creating virtual environment folder at {C.settings['venv_folderpath']}...")
         subprocess.run([python_command, "-m","venv", C.settings["venv_folderpath"]])
     else:
         v_print(f"Virtual environment folder already exists at '{C.settings["venv_folderpath"]}'.")
