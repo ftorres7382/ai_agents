@@ -57,7 +57,7 @@ def main():
     # System level checks
     ##########################
     # region:
-    print("Checking if the host meets the program minimum requirements...\n")
+    print("Validating that the host meets the program minimum requirements...\n")
     # Check if the OS is supported
     info = platform.freedesktop_os_release()
     if info["PRETTY_NAME"] in supported_os_pretty_names:
@@ -246,7 +246,7 @@ def check_config():
 
     if not os.path.exists(config_filepath):
         print("Configuration file was not detected.")
-        print("Setting up default configuration...")
+        print("Setting up default configuration...\n")
         shutil.copyfile(template_config_filepath, config_filepath)
 
 
@@ -319,7 +319,7 @@ def check_python():
             reason = "Wrong Version"
         
         if reason == "Not Installed":
-            print(f"'{python_command}' was not detected, trying python3...")
+            print(f"'{python_command}' command was not detected...")
             return False
         elif reason == "Wrong Version":
             print(f"'{python_command}' is available but does not point to a python3.12 version...")
@@ -332,7 +332,7 @@ def check_python():
     if result: 
         return True
     
-    print(f"'{python_command}' command check failed, trying python3")    
+    print(f"'{python_command}' command check failed, trying python3\n")    
 
     python_command = "python3"
     result = check_python_command()
