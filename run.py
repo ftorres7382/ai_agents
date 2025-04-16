@@ -13,22 +13,18 @@ import subprocess
 import os
 import typing as t
 import time
+import shutil
 
-import config as C
-
-# Global variable to track verbosity
-verbose_build = False
-skip_checks = False
-python_command = None
-venv_python_path = os.path.join(
-    C.settings["venv_folderpath"],
-    "bin/python3"    
-)
-
-install_supported_distro_list = [
-    # 'Linux Mint', # Coming soon...
-]
-
+# Set starting values to the global variables
+verbose_build = None
+skip_checks = None
+python_command = ""
+venv_python_path = ""
+install_supported_distro_list = []
+supported_os = None
+config_name = ""
+template_config_filepath = ""
+config_filepath = ""
 
 def main():
     '''
@@ -43,13 +39,51 @@ def main():
         print("Starting the app...")
         run_app()
         exit(0)
+    
 
     print()
-
+    global C
     ##########################
     # System level checks
     ##########################
     # region:
+    # Check if the OS is supported
+    import platform
+
+    print("System:", platform.system())         # e.g. 'Windows', 'Linux', 'Darwin'
+    print("Node:", platform.node())             # Hostname
+    print("Release:", platform.release())       # OS version (e.g., '10' or '22.04')
+    print("Version:", platform.version())       # Detailed version
+    print("Machine:", platform.machine())       # Machine type (e.g., 'x86_64')
+    print("Processor:", platform.processor())   # Processor name
+
+    wuit()
+
+
+    # This script needs at least python3
+    v_print("Checking the minimum python that is running this script...")
+    check_minimum_python()
+    v_print("PASSED! The python running this script has the minimum requirements!")
+
+    # Check if config has been set up
+    v_print("Checking the config file...")
+    check_config()
+    v_print("PASSED! The config file can now be found!")
+
+    import config as C
+
+    # Global variable to track verbosity
+    verbose_build = False
+    skip_checks = False
+    python_command = None
+    venv_python_path = os.path.join(
+        C.settings["venv_folderpath"],
+        "bin/python3"    
+    )
+
+    install_supported_distro_list = [
+        # 'Linux Mint', # Coming soon...
+    ]
 
 
     # Must be Linux OS
@@ -199,6 +233,26 @@ def make_initial_venv_folder():
 # System level checks
 ##########################
 # region: 
+def check_minimum_python():
+    '''
+    This module checks to make sure the python has the minmum 
+    '''
+
+def check_config():
+    '''
+    This module checks the config file.
+    At first it will just make sure the file exists, in the long run it can validate that the settings are right
+    '''
+    global config_name, template_config_filepath, config_filepath
+    config_name = "config"
+    template_config_filepath = f"{config_name}_template.py"
+    config_filepath = template_config_filepath.replace("_template.py", ".py")
+    if not os.path.exists(config_filepath):
+        print("Configuration file was not detected.")
+        print("Starting with default settings...")
+        shutil.copyfile(config_filepath, config_filepath)
+
+
 def get_os_info():
     info = {}
     with open("/etc/os-release") as f:
