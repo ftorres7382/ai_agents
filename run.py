@@ -15,16 +15,13 @@ import typing as t
 import time
 import shutil
 
+from app_code.Downloads_and_Installs.\
+    Installs.Installs_Manager import Installs_Manager
 # Set starting values to the global variables
 verbose_build = None
 skip_checks = None
 python_command = None
 venv_python_path = None
-supported_os_pretty_names = [
-    # Use the pretty names from platform.freedesktop_os_release()
-    "Debian GNU/Linux 12 (bookworm)",
-    # "Linux Mint 22" # Needs to be tested at a later date!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-]
 supported_os: t.Union[bool, None] = None
 config_name = "config"
 template_config_filepath = config_name + "_template.py"
@@ -59,9 +56,7 @@ def main():
     # region:
     print("Validating that the host meets the program minimum requirements...\n")
     # Check if the OS is supported
-    info = platform.freedesktop_os_release()
-    if info["PRETTY_NAME"] in supported_os_pretty_names:
-        supported_os = True
+    supported_os = Installs_Manager.supported_os()
 
     # This script also has requirements to be able to run
     v_print("Checking the minimum python that is running this script...")
