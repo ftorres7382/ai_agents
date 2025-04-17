@@ -57,7 +57,7 @@ def main():
     print("Validating that the host meets the program minimum requirements...\n")
     # Check if the OS is supported
     supported_os = Installs_Manager.supported_os()
-
+    print(supported_os)
     # This script also has requirements to be able to run
     v_print("Checking the minimum python that is running this script...")
     check_minimum_python()
