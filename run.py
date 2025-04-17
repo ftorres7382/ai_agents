@@ -342,7 +342,7 @@ def check_python():
        result = input("Would you like the program to install Python3.12 automatically? (y/n): ")
        result = result.lower()
        if result == "y":
-           raise NotImplementedError("ERROR! Automatic install of Ptyhon3.12 has not been implemented yet!") 
+           Installs_Manager.install_python()
     print("Please install Python 3.12!")
     sys.exit(1)
 
