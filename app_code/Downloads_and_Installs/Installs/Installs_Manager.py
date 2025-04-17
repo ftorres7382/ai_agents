@@ -31,7 +31,7 @@ class Installs_Manager(Base_Installs):
     INSTALL_CLASS_MAPPING: INSTALL_CLASS_MAPPING_DICT_TYPE = {
         "Debian GNU/Linux 12 (bookworm)": Debian_Installs
     }
-    SUPPORTED_OS_LIST = list(INSTALL_CLASS_MAPPING.keys())
+    SUPPORTED_OS_PRETTY_NAME_LIST = list(INSTALL_CLASS_MAPPING.keys())
     @classmethod
     def running_as_root(cls) -> bool:
         '''
@@ -62,7 +62,8 @@ class Installs_Manager(Base_Installs):
         '''
         Returns whether or not the current os is supported
         '''
-        return cls.get_os_pretty_name()  not in cls.SUPPORTED_OS_LIST
+        print(cls.SUPPORTED_OS_PRETTY_NAME_LIST)
+        return cls.get_os_pretty_name()  not in cls.SUPPORTED_OS_PRETTY_NAME_LIST
 
 
     @classmethod
@@ -71,7 +72,7 @@ class Installs_Manager(Base_Installs):
         Raises an error if the OS is not supported
         '''
         os_pretty_name = cls.get_os_pretty_name() 
-        if os_pretty_name not in cls.SUPPORTED_OS_LIST:
+        if os_pretty_name not in cls.SUPPORTED_OS_PRETTY_NAME_LIST:
             raise Exception(f"ERROR! '{os_pretty_name}' is not supported!") 
 
 
