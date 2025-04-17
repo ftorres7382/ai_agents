@@ -62,6 +62,7 @@ class Installs_Manager(Base_Installs):
         '''
         Returns whether or not the current os is supported
         '''
+        print(cls.get_os_pretty_name())
         print(cls.SUPPORTED_OS_PRETTY_NAME_LIST)
         return cls.get_os_pretty_name()  not in cls.SUPPORTED_OS_PRETTY_NAME_LIST
 
