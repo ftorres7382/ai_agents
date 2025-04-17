@@ -31,7 +31,7 @@ class Installs_Manager(Base_Installs):
     INSTALL_CLASS_MAPPING: INSTALL_CLASS_MAPPING_DICT_TYPE = {
         "Debian GNU/Linux 12 (bookworm)": Debian_Installs
     }
-    SUPPORTED_OS_LIST = list(INSTALL_CLASS_MAPPING)
+    SUPPORTED_OS_LIST = list(INSTALL_CLASS_MAPPING.keys())
     @classmethod
     def running_as_root(cls) -> bool:
         '''
