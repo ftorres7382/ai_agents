@@ -37,10 +37,15 @@ class DEVICES_INFO_DICT_TYPE(t.TypedDict):
     INPUT: DEVICE_INFO_DICT_TYPE
     OUTPUT: DEVICE_INFO_DICT_TYPE
 
-class STREAM_DICT_TYPE(t.TypedDict):
-    queue: t.Union[queue.Queue[bytes | None], None]
-    stream_obj: t.Union[subprocess.Popen[bytes], None]
-    filestream_obj: t.Union[subprocess.Popen[bytes], None]
+QUEUE_STREAM_DICT_TYPE = t.TypedDict("QUEUE_STREAM_DICT_TYPE", {
+    "byte_chunks_queue": t.Union[queue.Queue[bytes | None]],
+    "subprocess_obj": t.Union[subprocess.Popen[bytes]]
+})
+
+# class STREAM_DICT_TYPE(t.TypedDict):
+#     queue: t.Union[queue.Queue[bytes | None], None]
+#     stream_obj: t.Union[subprocess.Popen[bytes], None]
+#     filestream_obj: t.Union[subprocess.Popen[bytes], None]
     
 
 # endregion
@@ -146,90 +151,128 @@ class SDU:
 
         return ffmpeg_proc
 
-
     @classmethod
-    def start_stream(cls, 
-                     pulse_device_name: str, 
-                     stream_chunk_duration_secs: int = 1,
-                     start_queue_stream:bool = True,
-                     start_filestream: bool = False, 
-                     filestream_filepath: t.Union[str, None] = None, 
-                     wait_after_start:bool = True,
-                     verbose:bool = True
-                     ) -> STREAM_DICT_TYPE:
+    def start_byte_chunks_queue_stream(cls,
+                           pulse_source_name: str,
+                           chunk_size: int = 1024,
+                           wait_after_start: bool = True,
+                           verbose: bool = False
+                           ) -> QUEUE_STREAM_DICT_TYPE:
         '''
-        Returns the stream subprocess and the queue of the stream's data
+        This function starts a queue stream and returns the queue stream as well as the subprocess object
         '''
-        
-        if not start_filestream and not start_queue_stream:
-            raise ValueError("ERROR! Please start a queue or filestream!")
-        
-        # Validate the device name in the list of sources to listen to
-        short_info_dict_list = PLSU.get_short_info("sources")
-        allowed_names = [item["name"] for item in short_info_dict_list]
-        if pulse_device_name not in allowed_names:
-            raise ValueError(f"ERROR! The name '{pulse_device_name}' was not found in the list of puls sources! List of pulse sources: {allowed_names}")
-        selected_short_info_dict = [item for item in short_info_dict_list if item["name"] == pulse_device_name][0]
-        
-        # Set starting values
-        raw_q: t.Union[queue.Queue[bytes | None], None] = None
-        stream_obj: t.Union[subprocess.Popen[bytes], None] = None
-        filestream_obj: t.Union[subprocess.Popen[bytes], None] = None
+        PLSU.check_device_name(pulse_source_name, "sources")
 
+        byte_chunks_queue: queue.Queue[bytes | None] = queue.Queue()
 
-        if start_queue_stream:
-            cls.print("Starting Queue stream...", verbose)
-            raw_q = queue.Queue()            
-            chunk_size = 1024
-            stream_obj = cls.start_stream_subprocess(pulse_device_name, wait_after_start=True)
-            def raw_chunks_reader_thread() -> None:
-                while True:
-                    stdout = t.cast(t.IO[bytes], stream_obj.stdout)
-                    chunk = stdout.read(chunk_size)
-                    if not chunk:
-                        break
-                    raw_q.put(chunk)
-                stdout.close()
-                raw_q.put(None)
-            def time_chunks_reader_thread() -> None:
-                '''
-                This function gets the information in the raw queue and splits it into the allotted time chunks based on the pulse device information
-                '''
-            threading.Thread(target=raw_chunks_reader_thread, daemon=True).start()
-        
+        cls.print("Starting RAW Queue stream...", verbose)
 
-        if start_filestream:
-            cls.print("Starting Filestream",verbose)
-            if not isinstance(filestream_filepath, str):
-                raise ValueError("ERROR! start_filestream is True but filestream_filepath is None!")
-            filestream_obj = cls.start_filestream_subprocess(pulse_device_name, filestream_filepath, wait_after_start=False)
+        # Get the stream object
+        subprocess_obj = cls.start_stream_subprocess(pulse_source_name, wait_after_start=True)
+        def raw_chunks_reader_thread() -> None:
+            while True:
+                stdout = t.cast(t.IO[bytes], subprocess_obj.stdout)
+                chunk = stdout.read(chunk_size)
+                if not chunk:
+                    break
+                byte_chunks_queue.put(chunk)
+            stdout.close()
+            byte_chunks_queue.put(None)
 
-        
+        threading.Thread(target=raw_chunks_reader_thread, daemon=True).start()
+
         if wait_after_start:
             time.sleep(2)
 
         return {
-            "queue":q,
-            "stream_obj": stream_obj,
-            "filestream_obj": filestream_obj
+            "byte_chunks_queue": byte_chunks_queue,
+            "subprocess_obj": subprocess_obj
         }
 
+    
+    # @classmethod
+    # def start_stream(cls, 
+    #                  pulse_device_name: str, 
+    #                  stream_chunk_duration_secs: int = 1,
+    #                  start_queue_stream:bool = True,
+    #                  start_filestream: bool = False, 
+    #                  filestream_filepath: t.Union[str, None] = None, 
+    #                  wait_after_start:bool = True,
+    #                  verbose:bool = True
+    #                  ) -> STREAM_DICT_TYPE:
+    #     '''
+    #     Returns the stream subprocess and the queue of the stream's data
+    #     '''
+        
+    #     if not start_filestream and not start_queue_stream:
+    #         raise ValueError("ERROR! Please start a queue or filestream!")
+        
+    #     # Validate the device name in the list of sources to listen to
+    #     short_info_dict_list = PLSU.get_short_info("sources")
+    #     allowed_names = [item["name"] for item in short_info_dict_list]
+    #     if pulse_device_name not in allowed_names:
+    #         raise ValueError(f"ERROR! The name '{pulse_device_name}' was not found in the list of puls sources! List of pulse sources: {allowed_names}")
+    #     selected_short_info_dict = [item for item in short_info_dict_list if item["name"] == pulse_device_name][0]
+        
+    #     # Set starting values
+    #     raw_q: t.Union[queue.Queue[bytes | None], None] = None
+    #     stream_obj: t.Union[subprocess.Popen[bytes], None] = None
+    #     filestream_obj: t.Union[subprocess.Popen[bytes], None] = None
 
-    @classmethod
-    def stop_stream(cls, stream_dict: STREAM_DICT_TYPE) -> None:
-        '''
-        This method grecefully stops the stream
-        '''
-        keys_list: t.List[t.Literal["stream_obj", "filestream_obj"]]= ["stream_obj", "filestream_obj"]
-        for key in keys_list:
-            stream_obj = stream_dict[key]
-            if stream_obj is None:
-                continue
-            try:
-                stream_obj.terminate()
-                stream_obj.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                stream_obj.kill()
+
+    #     if start_queue_stream:
+    #         cls.print("Starting Queue stream...", verbose)
+    #         raw_q = queue.Queue()            
+    #         chunk_size = 1024
+    #         stream_obj = cls.start_stream_subprocess(pulse_device_name, wait_after_start=True)
+    #         def raw_chunks_reader_thread() -> None:
+    #             while True:
+    #                 stdout = t.cast(t.IO[bytes], stream_obj.stdout)
+    #                 chunk = stdout.read(chunk_size)
+    #                 if not chunk:
+    #                     break
+    #                 raw_q.put(chunk)
+    #             stdout.close()
+    #             raw_q.put(None)
+    #         def time_chunks_reader_thread() -> None:
+    #             '''
+    #             This function gets the information in the raw queue and splits it into the allotted time chunks based on the pulse device information
+    #             '''
+    #         threading.Thread(target=raw_chunks_reader_thread, daemon=True).start()
+        
+
+    #     if start_filestream:
+    #         cls.print("Starting Filestream",verbose)
+    #         if not isinstance(filestream_filepath, str):
+    #             raise ValueError("ERROR! start_filestream is True but filestream_filepath is None!")
+    #         filestream_obj = cls.start_filestream_subprocess(pulse_device_name, filestream_filepath, wait_after_start=False)
+
+        
+    #     if wait_after_start:
+    #         time.sleep(2)
+
+    #     return {
+    #         "queue":q,
+    #         "stream_obj": stream_obj,
+    #         "filestream_obj": filestream_obj
+    #     }
+
+
+    # @classmethod
+    # def stop_stream(cls, stream_dict: STREAM_DICT_TYPE) -> None:
+    #     '''
+    #     This method grecefully stops the stream
+    #     '''
+    #     keys_list: t.List[t.Literal["stream_obj", "filestream_obj"]]= ["stream_obj", "filestream_obj"]
+    #     for key in keys_list:
+    #         stream_obj = stream_dict[key]
+    #         if stream_obj is None:
+    #             continue
+    #         try:
+    #             stream_obj.terminate()
+    #             stream_obj.wait(timeout=5)
+    #         except subprocess.TimeoutExpired:
+    #             stream_obj.kill()
         
         
     @classmethod

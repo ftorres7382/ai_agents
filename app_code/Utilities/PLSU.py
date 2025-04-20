@@ -127,6 +127,16 @@ class PLSU:
         return return_result
         
 
+    @classmethod
+    def check_device_name(cls, device_name: str, device_type: VALID_PULSE_AUDIO_VALUES) -> None:
+        '''
+        This function raises an error if the device name is not found amoung its given type
+        '''
+        short_info_dict_list = PLSU.get_short_info(device_type)
+        allowed_names = [item["name"] for item in short_info_dict_list]
+        if device_name not in allowed_names:
+            raise ValueError(f"ERROR! The name '{device_name}' was not found in the list of pulse devices of type '{device_type}'! List of allowed pulse names for {device_type}: {allowed_names}")
+        
 
 
 

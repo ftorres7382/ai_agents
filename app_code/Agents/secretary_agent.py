@@ -96,6 +96,28 @@ class secretary_agent(base_agent):
         
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
         audio_filepath = os.path.join(audio_dirpath, timestamp + ".mp3")
+
+        pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
+        queue_stream_dict = SDU.start_byte_chunks_queue_stream(
+            pulse_source_name=pulse_source_name            
+        )
+
+        start_time = time.time()
+        end_sec = 10
+        while (time.time() - start_time) <= end_sec:
+            q = queue_stream_dict["byte_chunks_queue"]
+            if q is not None:
+                chunk = q.get()
+                if chunk is None:
+                    break
+                print(f"Got audio chunk of size: {len(chunk)}")
+            else:
+                print("Sleeping...")
+                time.sleep(.5)
+
+
+
+        return
     
         audio_stream_dict = SDU.start_stream(
             f"{C.settings['combined_audio_sink_name']}.monitor",
