@@ -7,6 +7,26 @@ VALID_PULSE_AUDIO_VALUES = t.Literal[
     "sinks",
     "sources",
 ]
+VALID_PULSE_AUDIO_VALUES_LIST = t.get_args(VALID_PULSE_AUDIO_VALUES)
+
+SAMPLE_SPEC_DICT_TYPE = t.TypedDict("SAMPLE_SPEC_DICT_TYPE", {
+    "data_format": str,
+    "channels": int,
+    "sample_rate": int
+})
+SAMPLE_SPEC_DICT_TYPE_KEYS_LIST = list(SAMPLE_SPEC_DICT_TYPE.__annotations__.keys())
+
+SHORT_INFO_DICT_TYPE = t.TypedDict("SHORT_INFO_DICT_TYPE", {
+    "id": int,
+    "name": str,
+    "driver": str,
+    "sample_specs": SAMPLE_SPEC_DICT_TYPE,
+    "state": str
+})
+
+SHORT_INFO_DICT_TYPE_KEYS_LIST = list(SHORT_INFO_DICT_TYPE.__annotations__.keys())
+ 
+
 
 class PLSU:
     '''
@@ -51,6 +71,63 @@ class PLSU:
 
         ids_list = [int(item.split("\t")[0]) for item in result_list]
         return ids_list
+
+    @classmethod
+    def get_short_info(cls, audio_type: VALID_PULSE_AUDIO_VALUES) -> t.List[SHORT_INFO_DICT_TYPE]:
+        '''
+        Uses pactl list sources short to return the information on the sources
+        '''
+        if audio_type not in VALID_PULSE_AUDIO_VALUES_LIST:
+            raise ValueError(f"ERROR! 'audio_type' can only be on of the values '{VALID_PULSE_AUDIO_VALUES_LIST}'. Received: {audio_type}") 
+        command = f"pactl list {audio_type} short"
+        result = subprocess.run(command, capture_output=True, text=True, shell=True).stdout
+        lines = result.split("\n")
+        lines = [line for line in lines if line != ""]
+
+        header_keys = SHORT_INFO_DICT_TYPE_KEYS_LIST
+        return_result: t.List[SHORT_INFO_DICT_TYPE] = []
+        for line in lines:
+            values = line.split("\t")
+            append_dict = {}
+            for i, value in enumerate(values):
+                save_value: t.Union[str,int, SAMPLE_SPEC_DICT_TYPE]
+                key_name = header_keys[i]
+                
+                if key_name == "sample_specs":
+                    # Split the sample specs values
+                    sample_specs_values = value.split(" ")
+                    sample_specs_values = [item for item in sample_specs_values if item != ""]
+
+                    sample_specs_header = SAMPLE_SPEC_DICT_TYPE_KEYS_LIST
+                    sample_specs_dict: dict[t.Any, t.Any] = {}
+                    
+                    for i, sample_value in enumerate(sample_specs_values):
+                        save_sample_value: t.Union[str, int]
+                        sample_key = sample_specs_header[i]
+                        # Data cleanup
+                        if sample_key == "channels":
+                            sample_value = sample_value.replace("ch", "")
+                            save_sample_value = int(sample_value)
+                        elif sample_key == "sample_rate":
+                            sample_value = sample_value.replace("Hz", "")
+                            save_sample_value = int(sample_value)    
+                        else:
+                            save_sample_value = sample_value
+
+                        sample_specs_dict[sample_key] = save_sample_value
+                    save_value = t.cast(SAMPLE_SPEC_DICT_TYPE, sample_specs_dict)
+                elif key_name == "id":
+                    save_value = int(value)
+                else: 
+                    save_value = value
+                append_dict[key_name] = save_value
+            final_append_dict = t.cast(SHORT_INFO_DICT_TYPE, append_dict)
+            return_result.append(final_append_dict)
+        
+        return return_result
+        
+
+
 
 
     @classmethod

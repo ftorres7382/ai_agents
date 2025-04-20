@@ -47,7 +47,7 @@ class STREAM_DICT_TYPE(t.TypedDict):
 
 
 
-class SDU(PLSU):
+class SDU:
     '''
     The Sound Device Utility (SDU) class standardizes getting information and interacting with the host's audio devices. 
     '''
@@ -76,7 +76,7 @@ class SDU(PLSU):
         # Create a new DEVICE_INFO_DICT_TYPE from the SD_DEVICE_INFO_DICT_TYPE with an additional field
         default_input_device_info: DEVICE_INFO_DICT_TYPE = {
             **sd_info_input,
-            "pulse_name": cls.get_pulse_name(sd_info_input["name"], "sinks")
+            "pulse_name": PLSU.get_pulse_name(sd_info_input["name"], "sinks")
         }
         
         # Get detailed information about the default output device
@@ -85,7 +85,7 @@ class SDU(PLSU):
         # Create a new DEVICE_INFO_DICT_TYPE from the SD_DEVICE_INFO_DICT_TYPE with an additional field
         default_output_device_info: DEVICE_INFO_DICT_TYPE = {
             **sd_info_output,
-            "pulse_name": cls.get_pulse_name(sd_info_output["name"], "sources")
+            "pulse_name": PLSU.get_pulse_name(sd_info_output["name"], "sources")
         }
 
         
@@ -146,10 +146,11 @@ class SDU(PLSU):
 
         return ffmpeg_proc
 
+
     @classmethod
     def start_stream(cls, 
-                     device_name: str, 
-                     chunk_size: int = 1024, 
+                     pulse_device_name: str, 
+                     stream_chunk_duration_secs: int = 1,
                      start_queue_stream:bool = True,
                      start_filestream: bool = False, 
                      filestream_filepath: t.Union[str, None] = None, 
@@ -157,49 +158,51 @@ class SDU(PLSU):
                      verbose:bool = True
                      ) -> STREAM_DICT_TYPE:
         '''
-        Returns the stream subprocess and the queque of the stream's data
-        '''
-
-        # TODO: Add something later that can record the input, output and the combined all in separate files later...
-        '''
-        ffmpeg \
-            -f pulse -i alsa_output.pci-0000_00_1b.0.analog-stereo.monitor \
-            -f pulse -i alsa_input.usb-YourMicName \
-            -filter_complex "[0:a]asetpts=PTS-STARTPTS[a1]; [1:a]asetpts=PTS-STARTPTS[a2]" \
-            -map "[a1]" output.wav \
-            -map "[a2]" input.wav
+        Returns the stream subprocess and the queue of the stream's data
         '''
         
         if not start_filestream and not start_queue_stream:
             raise ValueError("ERROR! Please start a queue or filestream!")
         
+        # Validate the device name in the list of sources to listen to
+        short_info_dict_list = PLSU.get_short_info("sources")
+        allowed_names = [item["name"] for item in short_info_dict_list]
+        if pulse_device_name not in allowed_names:
+            raise ValueError(f"ERROR! The name '{pulse_device_name}' was not found in the list of puls sources! List of pulse sources: {allowed_names}")
+        selected_short_info_dict = [item for item in short_info_dict_list if item["name"] == pulse_device_name][0]
+        
         # Set starting values
-        q: t.Union[queue.Queue[bytes | None], None] = None
+        raw_q: t.Union[queue.Queue[bytes | None], None] = None
         stream_obj: t.Union[subprocess.Popen[bytes], None] = None
         filestream_obj: t.Union[subprocess.Popen[bytes], None] = None
 
+
         if start_queue_stream:
             cls.print("Starting Queue stream...", verbose)
-            q = queue.Queue()
-            stream_obj = cls.start_stream_subprocess(device_name, wait_after_start=True)
-            def reader_thread() -> None:
+            raw_q = queue.Queue()            
+            chunk_size = 1024
+            stream_obj = cls.start_stream_subprocess(pulse_device_name, wait_after_start=True)
+            def raw_chunks_reader_thread() -> None:
                 while True:
                     stdout = t.cast(t.IO[bytes], stream_obj.stdout)
                     chunk = stdout.read(chunk_size)
                     if not chunk:
                         break
-                    q.put(chunk)
+                    raw_q.put(chunk)
                 stdout.close()
-                q.put(None)
-
-            threading.Thread(target=reader_thread, daemon=True).start()
+                raw_q.put(None)
+            def time_chunks_reader_thread() -> None:
+                '''
+                This function gets the information in the raw queue and splits it into the allotted time chunks based on the pulse device information
+                '''
+            threading.Thread(target=raw_chunks_reader_thread, daemon=True).start()
         
 
         if start_filestream:
             cls.print("Starting Filestream",verbose)
             if not isinstance(filestream_filepath, str):
                 raise ValueError("ERROR! start_filestream is True but filestream_filepath is None!")
-            filestream_obj = cls.start_filestream_subprocess(device_name, filestream_filepath, wait_after_start=False)
+            filestream_obj = cls.start_filestream_subprocess(pulse_device_name, filestream_filepath, wait_after_start=False)
 
         
         if wait_after_start:

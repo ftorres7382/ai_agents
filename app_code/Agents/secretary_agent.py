@@ -46,7 +46,6 @@ class secretary_agent(base_agent):
         flatten_dict(cls._REL_DIR_STRUCTURE)
         return dirs_list
 
-    
     @classmethod
     def data_folder_setup(cls, overwrite: bool = False) -> None:
         '''
@@ -73,9 +72,8 @@ class secretary_agent(base_agent):
         This command starts the model
         '''
         self.print("Starting scretary agent...\n")
-        return
 
-        self.print("Checking/Setting up data folder...\n")
+        self.print("Checking data folder...\n")
         self.data_folder_setup()
         
         self.print("Setting up Audio Devices...\n")
@@ -86,7 +84,7 @@ class secretary_agent(base_agent):
         # Set the pulse audio loopback
         self.print("Setting up mixed input and audio loopback device...")
 
-        SDU.overwrite_combined_pulse_loopback(
+        PLSU.overwrite_combined_pulse_loopback(
             default_devices_info['INPUT']['pulse_name'], 
             default_devices_info['OUTPUT']['pulse_name'],
             C.settings['combined_audio_sink_name']
