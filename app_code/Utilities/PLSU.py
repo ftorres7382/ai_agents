@@ -25,7 +25,9 @@ SHORT_INFO_DICT_TYPE = t.TypedDict("SHORT_INFO_DICT_TYPE", {
 })
 
 SHORT_INFO_DICT_TYPE_KEYS_LIST = list(SHORT_INFO_DICT_TYPE.__annotations__.keys())
- 
+
+
+
 
 
 class PLSU:
@@ -125,7 +127,7 @@ class PLSU:
             return_result.append(final_append_dict)
         
         return return_result
-        
+    
 
     @classmethod
     def check_device_name(cls, device_name: str, device_type: VALID_PULSE_AUDIO_VALUES) -> None:

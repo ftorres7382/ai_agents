@@ -189,6 +189,38 @@ class SDU:
             "subprocess_obj": subprocess_obj
         }
 
+    @classmethod
+    def get_time_split_queue_stream(cls,
+                                    byte_chunks_queue: queue.Queue[bytes | None],
+                                    pulse_source_name: str,
+                                    interval_seconds: int,
+                                    wait_time: float = .1
+                                    ) -> None:
+        # queue.Queue[bytes | None]
+        '''
+        This function will take the byte chunks queue and return another queue that is split by the time specified
+        '''
+        # Validate the device source name
+        PLSU.check_device_name(pulse_source_name, "sources")
+
+        # Get the information about the device to know how to split the bytes
+        devices_short_info = PLSU.get_short_info("sources")
+        device_info = [item for item in devices_short_info if item["name"] == pulse_source_name][0]
+
+        # get all the information needed to get the calculation
+        sample_rate = device_info["sample_specs"]["sample_rate"]
+        channels = device_info["sample_specs"]["channels"]
+
+        data_format = device_info["sample_specs"]["data_format"]
+
+        if data_format == "":
+            pass
+        else:
+            raise NotImplementedError(f"ERROR! The audio data format '{data_format}' has not been coded in yet! A Fix is needed for it to work!")
+
+        split_bytes = ()
+
+        print(device_info)        
     
     # @classmethod
     # def start_stream(cls, 

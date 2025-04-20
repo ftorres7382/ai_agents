@@ -92,15 +92,24 @@ class secretary_agent(base_agent):
         
         
         # Start the stream
+        pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
+        queue_stream_dict = SDU.start_byte_chunks_queue_stream(
+            pulse_source_name=pulse_source_name            
+        )
+        time_split_q = SDU.get_time_split_queue_stream(
+            byte_chunks_queue=queue_stream_dict["byte_chunks_queue"],
+            pulse_source_name=pulse_source_name,
+            interval_seconds=1
+        )
+        return
+
+
         audio_dirpath = os.path.join(C.settings["save_folder_path"], "secretary_agent", "audio_recordings", "raw")
         
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
         audio_filepath = os.path.join(audio_dirpath, timestamp + ".mp3")
 
-        pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
-        queue_stream_dict = SDU.start_byte_chunks_queue_stream(
-            pulse_source_name=pulse_source_name            
-        )
+
 
         start_time = time.time()
         end_sec = 10
