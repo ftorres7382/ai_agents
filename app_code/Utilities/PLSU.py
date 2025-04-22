@@ -34,11 +34,22 @@ class PLSU:
     '''
     The purpose of this class us to handle any operations that involve pulse audio
     '''
-    # TODO:
-    # Add get_devices info
-    # Add get_sinks_info
-    # Add get_sources_info?
+    DATA_FORMAT_BYTE_SIZE = {
+    'uint8': 1,
+    'int16le': 2,
+    'int32le': 4,
+    'float32le': 4,
+    'float64le': 8,
+    }
 
+    @classmethod
+    def get_data_format_bytes(cls, data_format: str) -> int:
+        '''
+        This function returns the bytes taken for a specific pulse audio format type
+        '''
+        if data_format not in cls.DATA_FORMAT_BYTE_SIZE.keys():
+            raise ValueError(f"ERROR! The data format '{data_format}' is not supported! Supported formats: '{list(cls.DATA_FORMAT_BYTE_SIZE.keys())}'")
+        return cls.DATA_FORMAT_BYTE_SIZE[data_format]
 
     @classmethod
     def get_pulse_name(cls, sd_name: str, pulse_audio_type: VALID_PULSE_AUDIO_VALUES) -> str:

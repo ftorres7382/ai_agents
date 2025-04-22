@@ -99,8 +99,23 @@ class secretary_agent(base_agent):
         time_split_q = SDU.get_time_split_queue_stream(
             byte_chunks_queue=queue_stream_dict["byte_chunks_queue"],
             pulse_source_name=pulse_source_name,
-            interval_seconds=1
+            split_interval_seconds=1
         )
+
+        start_time = time.time()
+        end_sec = 10
+        while (time.time() - start_time) <= end_sec:
+            q = time_split_q
+            if q is not None:
+                chunk = q.get()
+                if chunk is None:
+                    break
+                print(f"Got audio chunk of size: {len(chunk)}")
+            else:
+                print("Sleeping...")
+                time.sleep(.5)
+
+
         return
 
 

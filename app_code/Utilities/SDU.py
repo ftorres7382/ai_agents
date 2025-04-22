@@ -41,15 +41,32 @@ QUEUE_STREAM_DICT_TYPE = t.TypedDict("QUEUE_STREAM_DICT_TYPE", {
     "byte_chunks_queue": t.Union[queue.Queue[bytes | None]],
     "subprocess_obj": t.Union[subprocess.Popen[bytes]]
 })
-
-# class STREAM_DICT_TYPE(t.TypedDict):
-#     queue: t.Union[queue.Queue[bytes | None], None]
-#     stream_obj: t.Union[subprocess.Popen[bytes], None]
-#     filestream_obj: t.Union[subprocess.Popen[bytes], None]
     
 
 # endregion
 
+PCM_CODEC_BYTE_SIZE_MAPPING = {
+    "s8": 1,
+    "u8": 1,
+    "s16le": 2,
+    "s16be": 2,
+    "u16le": 2,
+    "u16be": 2,
+    "s24le": 3,
+    "s24be": 3,
+    "s32le": 4,
+    "s32be": 4,
+    "u32le": 4,
+    "u32be": 4,
+    "f32le": 4,
+    "f32be": 4,
+    "f64le": 8,
+    "f64be": 8,
+    "alaw": 1,
+    "mulaw": 1,
+    "s16le_planar": 2,
+    "s24le_planar": 3,
+}
 
 
 class SDU:
@@ -101,18 +118,43 @@ class SDU:
         }
 
     @classmethod
-    def start_stream_subprocess(cls, device_name: str, wait_after_start:bool = True)-> subprocess.Popen[bytes]:
+    def start_stream_subprocess(cls, 
+                                device_name: str, 
+                                sample_rate: t.Optional[int] = None,
+                                channels: t.Optional[int] = None,
+                                pcm_codec: str = "s16le",
+                                wait_after_start:bool = True
+                                )-> subprocess.Popen[bytes]:
         '''
         This function returns the subprocess that has the currently running stream using ffmpeg
-        '''        
-        ffmpeg_proc = subprocess.Popen([
+        '''      
+        # Check the device name
+        PLSU.check_device_name(device_name=device_name, device_type="sources")
+        
+        # Get the device's information
+        device_info = PLSU.get_short_info(audio_type="sources")
+        selected_device_info = [item for item in device_info if item["name"] == device_name][0]
+
+        # Set default values to the optional arguments
+        if sample_rate is None:
+            sample_rate = selected_device_info["sample_specs"]["sample_rate"]
+
+        if channels is None:
+            channels = selected_device_info["sample_specs"]["channels"]
+        
+
+        commands_list = [
             "ffmpeg",
             "-y",                    # Overwrite output file without asking
             "-f", "pulse",           # PulseAudio input
             "-i", device_name,  # Your monitor source
-            "-f", "mp3",             # Output format (MP3)
+            "-ac", str(channels),    
+            "-ar", str(sample_rate),    
+            "-f", pcm_codec,
             "-",                     # Output to stdout (pipe)
-        ], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
+        ]
+
+        ffmpeg_proc = subprocess.Popen(commands_list, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, bufsize=0)
 
         # Wait for a few seconds to ensure recording has started
         if wait_after_start:
@@ -193,12 +235,13 @@ class SDU:
     def get_time_split_queue_stream(cls,
                                     byte_chunks_queue: queue.Queue[bytes | None],
                                     pulse_source_name: str,
-                                    interval_seconds: int,
-                                    wait_time: float = .1
-                                    ) -> None:
-        # queue.Queue[bytes | None]
+                                    split_interval_seconds: int,
+                                    sample_rate: t.Optional[int] = None,
+                                    channels: t.Optional[int] = None,
+                                    pcm_codec: str = "s16le",
+                                    ) -> queue.Queue[bytes | None]:
         '''
-        This function will take the byte chunks queue and return another queue that is split by the time specified
+        This function will take the byte chunks queue and return another queue that is split by the specified time
         '''
         # Validate the device source name
         PLSU.check_device_name(pulse_source_name, "sources")
@@ -207,20 +250,76 @@ class SDU:
         devices_short_info = PLSU.get_short_info("sources")
         device_info = [item for item in devices_short_info if item["name"] == pulse_source_name][0]
 
-        # get all the information needed to get the calculation
-        sample_rate = device_info["sample_specs"]["sample_rate"]
-        channels = device_info["sample_specs"]["channels"]
+        # Set default values to the optional arguments
+        if sample_rate is None:
+            sample_rate = device_info["sample_specs"]["sample_rate"]
 
-        data_format = device_info["sample_specs"]["data_format"]
+        if channels is None:
+            channels = device_info["sample_specs"]["channels"]
 
-        if data_format == "":
-            pass
-        else:
-            raise NotImplementedError(f"ERROR! The audio data format '{data_format}' has not been coded in yet! A Fix is needed for it to work!")
+        try:
+            pcm_codec_bytes = PCM_CODEC_BYTE_SIZE_MAPPING[pcm_codec]
+        except:
+            raise ValueError(f"ERROR! The pcm_codec '{pcm_codec}' is not an allowed value! Allowed values: {list(PCM_CODEC_BYTE_SIZE_MAPPING.keys())}")
 
-        split_bytes = ()
+        # Calculate the split bytes
+        split_bytes = (sample_rate * channels * split_interval_seconds) * pcm_codec_bytes
 
-        print(device_info)        
+        # print("Sample Rate:", sample_rate)
+        # print("Channels: ", channels)
+        # print("Split_interval_seconds: ", split_interval_seconds)
+        # print("Data Format Bytes: ", data_format_bytes)
+        # print("Split Bytes: ", split_bytes)
+
+        time_split_q: queue.Queue[bytes | None] = queue.Queue()
+        start_time = time.time()
+
+        # In general, this function should add to a buffer and wait the wait time, then it will check if the buffer has enough byts to split and adds a new thing to the queue
+        def time_split_chunks_thread() -> None:
+            '''
+            This function takes the bytes divided queue chunks and turns them to to time divided chunks
+            '''
+            # Stores incoming chunks
+            buffer = b''
+
+            while True:
+                bytes_chunk = byte_chunks_queue.get()
+
+                if bytes_chunk is not None:
+                    print("Received bytes, length of buffer: ", len(buffer))
+                    print("Time Duration: ", time.time() - start_time)
+
+                # LAST OF THE DATA COULD COMPRISE MORE THAN THE ALLOTTED TIME
+                # I DO NOT KNOW HOW TO TAKE CARE OF THIS THOUGH
+                if bytes_chunk is None:
+                    # Add the last of the data, then break
+                    time_split_q.put(buffer)
+                    # Reset buffer
+                    buffer = b''
+                    break
+                
+                # If here, the bytes_chunk is not None
+                buffer += bytes_chunk
+
+                # Send new bytes to queue if we can
+                if len(buffer) >= split_bytes:
+                    time_split_q.put(buffer[:split_bytes])
+                    buffer = buffer[split_bytes:]
+
+                # If the chunk is None, send what you can, then break
+                if bytes_chunk is None:
+                    # Add the last of the data, then break
+                    time_split_q.put(buffer)
+                    # Reset buffer
+                    buffer = b''
+                    break
+                               
+            time_split_q.put(None)            
+
+        threading.Thread(target=time_split_chunks_thread, daemon=True).start()
+        return time_split_q
+
+
     
     # @classmethod
     # def start_stream(cls, 
