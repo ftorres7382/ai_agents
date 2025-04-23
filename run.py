@@ -337,7 +337,8 @@ def check_python():
         return True
     print()
     # Python 3.12 is not available, print error and exit
-    print("ERROR! Neither 'python3.12' or 'python3' commands meet program requirements!")
+    print("'python3.12' and 'python3' commands are not present or meet program requirements!")
+    time.sleep(3)
     if supported_os:
        print()
        print("Supported OS Detected...")
