@@ -129,6 +129,10 @@ class secretary_agent(base_agent):
         try: 
             while True:
                 self.print("Starting listening loop ...")
+
+                # To imporve performance, maybe keep a window of 3-5 chunks running for the transcription to have context?
+                # The more data the more time it will take....
+                # Maybe we need to split the data between the talking and non talking segmented to make better processing economy
                 q = time_split_q
                 bytes_chunk = q.get()
                 if bytes_chunk is None:
