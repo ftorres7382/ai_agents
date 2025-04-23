@@ -244,6 +244,7 @@ def check_config():
         print("Configuration file was not detected.")
         print("Setting up default configuration...\n")
         shutil.copyfile(template_config_filepath, config_filepath)
+        time.sleep(3)
 
 
 def check_os():
