@@ -10,7 +10,8 @@ def run() -> None:
 
     secretary_agent(
         name="Quinn",
-        model_name="qwen2.5-coder"
+        ollama_model_name="qwen2.5-coder",
+        transcription_model_name= "turbo"
     ).start()
 
     

@@ -1,9 +1,13 @@
-from dataclasses import dataclass
 import time
 import shutil
-import typing as t
 import os
 from datetime import datetime
+import whisper # type: ignore[import-untyped]
+import torch
+
+import typing as t
+from app_code.literals import VALID_MODEL_NAMES
+
 
 
 from .base_agent import base_agent
@@ -11,23 +15,38 @@ from app_code.Utilities import SDU, PLSU
 import config as C
 
 
-@dataclass
 class secretary_agent(base_agent):
     '''
     This agent will take notes of what it hears in the audio out of the computer
     '''
+
     _REL_DIR_STRUCTURE = {
-            "secretary_agent":{
-                "audio_recordings":{
-                    "raw": None,
-                    "VAD": None,
-                },
-                "transcriptions": {
-                    "raw": None,
-                    "summary": None
-                }
+        "secretary_agent":{
+            "audio_recordings":{
+                "raw": None,
+                "VAD": None,
+            },
+            "transcriptions": {
+                "raw": None,
+                "summary": None
             }
         }
+    }
+
+    def __init__(self, 
+                 name: str,
+                 ollama_model_name: VALID_MODEL_NAMES, 
+                 transcription_model_name: t.Literal["tiny", "base", "small", "medium", "large", "turbo"], 
+                 verbose: bool = True):
+        super().__init__(name=name, verbose=verbose)
+        self.ollama_model_name = ollama_model_name
+        self.transcription_model_name = transcription_model_name
+
+        self.transcription_model = whisper.load_model(self.transcription_model_name)
+        
+
+
+    
     @classmethod
     def get_flattened_dir_structure(cls) -> t.List[str]:
         '''
@@ -90,31 +109,39 @@ class secretary_agent(base_agent):
             C.settings['combined_audio_sink_name']
             )
         
+
         
         # Start the stream
         pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
+        sample_rate = 16000
         queue_stream_dict = SDU.start_byte_chunks_queue_stream(
-            pulse_source_name=pulse_source_name            
+            pulse_source_name=pulse_source_name,
+            sample_rate=sample_rate
+
         )
         time_split_q = SDU.get_time_split_queue_stream(
             byte_chunks_queue=queue_stream_dict["byte_chunks_queue"],
             pulse_source_name=pulse_source_name,
-            split_interval_seconds=1
+            split_interval_seconds=8,
+            sample_rate=sample_rate
         )
 
-        start_time = time.time()
-        end_sec = 10
-        while (time.time() - start_time) <= end_sec:
-            q = time_split_q
-            if q is not None:
-                chunk = q.get()
-                if chunk is None:
+        try: 
+            while True:
+                self.print("Starting listening loop ...")
+                q = time_split_q
+                bytes_chunk = q.get()
+                if bytes_chunk is None:
                     break
-                print(f"Got audio chunk of size: {len(chunk)}")
-            else:
-                print("Sleeping...")
-                time.sleep(.5)
-
+                # turn bytes to np array
+                audio_np_array = SDU.bytes_to_float32_np(bytes_chunk, device_name=default_devices_info["OUTPUT"]["pulse_name"])
+                print(len(audio_np_array))
+                # Get transcription
+                result = self.transcription_model.transcribe(audio_np_array, fp16=torch.cuda.is_available())
+                text = result['text'].strip()
+                print(text)
+        except KeyboardInterrupt:
+            SDU.stop_subprocess(queue_stream_dict["subprocess_obj"])
 
         return
 

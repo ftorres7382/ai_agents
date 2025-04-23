@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
 import typing as t
 
-from dataclasses import dataclass
-from app_code.literals import VALID_MODEL_NAMES
 
-@dataclass
 class base_agent(ABC):
     '''
     This class defines the minimum amount of information needed to create an agent
@@ -12,9 +9,11 @@ class base_agent(ABC):
 
     Other agent classes will inherit this class 
     '''
-    name: str
-    model_name: VALID_MODEL_NAMES
-    verbose: bool = True
+
+    def __init__(self, name:str, verbose: bool = True):
+        self.name = name
+        self.verbose = verbose
+
 
     def print(self, value: t.Any) -> None:
         if self.verbose:

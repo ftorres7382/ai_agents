@@ -5,8 +5,11 @@ import time
 import queue
 import threading
 import os
+import numpy as np
 
 import typing as t
+from numpy.typing import NDArray
+
 from .PLSU import PLSU
 
 
@@ -68,6 +71,9 @@ PCM_CODEC_BYTE_SIZE_MAPPING = {
     "s24le_planar": 3,
 }
 
+PCM_CODEC_NP_DTYPE_MAPPING = {
+    's16le': np.int16
+}
 
 class SDU:
     '''
@@ -163,40 +169,12 @@ class SDU:
         return ffmpeg_proc
     
     @classmethod
-    def start_filestream_subprocess(cls, device_name:str, filepath:str, wait_after_start:bool = True) -> subprocess.Popen[bytes]:
-        '''
-        This function returns the subprocess that has the currently running stream that saves to a file using ffmpeg
-        '''  
-        # Make sure that you can create a file there
-        try:
-            with open(filepath, 'w') as f:
-                f.write("testing")
-        except Exception as e:
-            raise ValueError(f"ERROR! An error occured when testing write access using a dummy file. Error message: {e} ")
-
-        # If here, remove the dummy file
-        os.remove(filepath)
-        commands_list = [
-            "ffmpeg",
-            "-y",                    # Overwrite output file without asking
-            "-f", "pulse",           # PulseAudio input
-            "-i", device_name,       # Your monitor source
-            "-f", "mp3",             # Output format (MP3)
-            filepath                 # Output to file
-
-        ]
-        ffmpeg_proc = subprocess.Popen(commands_list, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-        # Wait for a few seconds to ensure recording has started
-        if wait_after_start:
-            time.sleep(2)
-
-        return ffmpeg_proc
-
-    @classmethod
     def start_byte_chunks_queue_stream(cls,
                            pulse_source_name: str,
                            chunk_size: int = 1024,
+                           sample_rate: t.Optional[int] = None,
+                           channels: t.Optional[int] = None,
+                           pcm_codec: str = "s16le",
                            wait_after_start: bool = True,
                            verbose: bool = False
                            ) -> QUEUE_STREAM_DICT_TYPE:
@@ -210,7 +188,13 @@ class SDU:
         cls.print("Starting RAW Queue stream...", verbose)
 
         # Get the stream object
-        subprocess_obj = cls.start_stream_subprocess(pulse_source_name, wait_after_start=True)
+        subprocess_obj = cls.start_stream_subprocess(
+            pulse_source_name, 
+            sample_rate=sample_rate,
+            channels=channels,
+            pcm_codec=pcm_codec,
+            wait_after_start=True
+            )
         def raw_chunks_reader_thread() -> None:
             while True:
                 stdout = t.cast(t.IO[bytes], subprocess_obj.stdout)
@@ -239,6 +223,7 @@ class SDU:
                                     sample_rate: t.Optional[int] = None,
                                     channels: t.Optional[int] = None,
                                     pcm_codec: str = "s16le",
+                                    verbose: bool = False
                                     ) -> queue.Queue[bytes | None]:
         '''
         This function will take the byte chunks queue and return another queue that is split by the specified time
@@ -265,12 +250,6 @@ class SDU:
         # Calculate the split bytes
         split_bytes = (sample_rate * channels * split_interval_seconds) * pcm_codec_bytes
 
-        # print("Sample Rate:", sample_rate)
-        # print("Channels: ", channels)
-        # print("Split_interval_seconds: ", split_interval_seconds)
-        # print("Data Format Bytes: ", data_format_bytes)
-        # print("Split Bytes: ", split_bytes)
-
         time_split_q: queue.Queue[bytes | None] = queue.Queue()
         start_time = time.time()
 
@@ -286,8 +265,8 @@ class SDU:
                 bytes_chunk = byte_chunks_queue.get()
 
                 if bytes_chunk is not None:
-                    print("Received bytes, length of buffer: ", len(buffer))
-                    print("Time Duration: ", time.time() - start_time)
+                    cls.print(f"Received bytes, length of buffer: {len(buffer)}", verbose)
+                    cls.print(f"Time Duration: {time.time() - start_time}", verbose)
 
                 # LAST OF THE DATA COULD COMPRISE MORE THAN THE ALLOTTED TIME
                 # I DO NOT KNOW HOW TO TAKE CARE OF THIS THOUGH
@@ -319,97 +298,93 @@ class SDU:
         threading.Thread(target=time_split_chunks_thread, daemon=True).start()
         return time_split_q
 
+    @classmethod
+    def start_filestream_subprocess(cls, device_name:str, filepath:str, wait_after_start:bool = True) -> subprocess.Popen[bytes]:
+        '''
+        This function returns the subprocess that has the currently running stream that saves to a file using ffmpeg
+        '''  
+        # Make sure that you can create a file there
+        try:
+            with open(filepath, 'w') as f:
+                f.write("testing")
+        except Exception as e:
+            raise ValueError(f"ERROR! An error occured when testing write access using a dummy file. Error message: {e} ")
 
-    
-    # @classmethod
-    # def start_stream(cls, 
-    #                  pulse_device_name: str, 
-    #                  stream_chunk_duration_secs: int = 1,
-    #                  start_queue_stream:bool = True,
-    #                  start_filestream: bool = False, 
-    #                  filestream_filepath: t.Union[str, None] = None, 
-    #                  wait_after_start:bool = True,
-    #                  verbose:bool = True
-    #                  ) -> STREAM_DICT_TYPE:
-    #     '''
-    #     Returns the stream subprocess and the queue of the stream's data
-    #     '''
+        # If here, remove the dummy file
+        os.remove(filepath)
+        commands_list = [
+            "ffmpeg",
+            "-y",                    # Overwrite output file without asking
+            "-f", "pulse",           # PulseAudio input
+            "-i", device_name,       # Your monitor source
+            "-f", "mp3",             # Output format (MP3)
+            filepath                 # Output to file
+
+        ]
+        ffmpeg_proc = subprocess.Popen(commands_list, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+        # Wait for a few seconds to ensure recording has started
+        if wait_after_start:
+            time.sleep(2)
+
+        return ffmpeg_proc
+
+
+    @classmethod
+    def bytes_to_float32_np(cls,
+                            raw_bytes: bytes, 
+                            device_name: str,
+                            channels: t.Optional[int] = None, 
+                            pcm_codec: str = "s16le"
+                            ) -> NDArray[np.float32]:
+        '''
+        This function takes an audio bytes object and transforms it to a numpy array from -1 to 1 
+        '''
+        try:
+            np_dtype = PCM_CODEC_NP_DTYPE_MAPPING[pcm_codec]
+        except:
+            raise ValueError(f"ERROR! pcm_codec can only be '{list(PCM_CODEC_NP_DTYPE_MAPPING.keys())}'!")
         
-    #     if not start_filestream and not start_queue_stream:
-    #         raise ValueError("ERROR! Please start a queue or filestream!")
+        # Check the device name
+        PLSU.check_device_name(device_name=device_name, device_type="sources")
         
-    #     # Validate the device name in the list of sources to listen to
-    #     short_info_dict_list = PLSU.get_short_info("sources")
-    #     allowed_names = [item["name"] for item in short_info_dict_list]
-    #     if pulse_device_name not in allowed_names:
-    #         raise ValueError(f"ERROR! The name '{pulse_device_name}' was not found in the list of puls sources! List of pulse sources: {allowed_names}")
-    #     selected_short_info_dict = [item for item in short_info_dict_list if item["name"] == pulse_device_name][0]
-        
-    #     # Set starting values
-    #     raw_q: t.Union[queue.Queue[bytes | None], None] = None
-    #     stream_obj: t.Union[subprocess.Popen[bytes], None] = None
-    #     filestream_obj: t.Union[subprocess.Popen[bytes], None] = None
+        # Get the device's information
+        device_info = PLSU.get_short_info(audio_type="sources")
+        selected_device_info = [item for item in device_info if item["name"] == device_name][0]
 
+        if channels is None:
+            channels = selected_device_info["sample_specs"]["channels"]
 
-    #     if start_queue_stream:
-    #         cls.print("Starting Queue stream...", verbose)
-    #         raw_q = queue.Queue()            
-    #         chunk_size = 1024
-    #         stream_obj = cls.start_stream_subprocess(pulse_device_name, wait_after_start=True)
-    #         def raw_chunks_reader_thread() -> None:
-    #             while True:
-    #                 stdout = t.cast(t.IO[bytes], stream_obj.stdout)
-    #                 chunk = stdout.read(chunk_size)
-    #                 if not chunk:
-    #                     break
-    #                 raw_q.put(chunk)
-    #             stdout.close()
-    #             raw_q.put(None)
-    #         def time_chunks_reader_thread() -> None:
-    #             '''
-    #             This function gets the information in the raw queue and splits it into the allotted time chunks based on the pulse device information
-    #             '''
-    #         threading.Thread(target=raw_chunks_reader_thread, daemon=True).start()
-        
-
-    #     if start_filestream:
-    #         cls.print("Starting Filestream",verbose)
-    #         if not isinstance(filestream_filepath, str):
-    #             raise ValueError("ERROR! start_filestream is True but filestream_filepath is None!")
-    #         filestream_obj = cls.start_filestream_subprocess(pulse_device_name, filestream_filepath, wait_after_start=False)
 
         
-    #     if wait_after_start:
-    #         time.sleep(2)
+        # Convert bytes to NumPy array
+        audio_np: NDArray[t.Any] = np.frombuffer(raw_bytes, dtype=np_dtype)
 
-    #     return {
-    #         "queue":q,
-    #         "stream_obj": stream_obj,
-    #         "filestream_obj": filestream_obj
-    #     }
+        # If stereo, reshape and take one channel (e.g. left channel)
+        if channels == 2:
+            audio_np = audio_np.reshape((-1, 2))
+            audio_np = audio_np.mean(axis=1)
 
+        # Normalize to float32 in range [-1.0, 1.0]
+        audio_np = audio_np.astype(np.float32) / 32768.0
 
-    # @classmethod
-    # def stop_stream(cls, stream_dict: STREAM_DICT_TYPE) -> None:
-    #     '''
-    #     This method grecefully stops the stream
-    #     '''
-    #     keys_list: t.List[t.Literal["stream_obj", "filestream_obj"]]= ["stream_obj", "filestream_obj"]
-    #     for key in keys_list:
-    #         stream_obj = stream_dict[key]
-    #         if stream_obj is None:
-    #             continue
-    #         try:
-    #             stream_obj.terminate()
-    #             stream_obj.wait(timeout=5)
-    #         except subprocess.TimeoutExpired:
-    #             stream_obj.kill()
+        return audio_np
         
         
     @classmethod
     def print(cls, value:t.Any, verbose: bool = True) -> None:
         if verbose:
             print(value)
+    
+    @classmethod
+    def stop_subprocess(cls, subprocess: t.Union[subprocess.Popen[bytes]]) -> None:
+        '''
+        This function gracefully stops the subprocess sent to it
+        '''
+        subprocess.terminate()
+        subprocess.wait()
+        return
+
 
 
 

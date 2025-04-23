@@ -20,5 +20,7 @@
 
 sudo apt install ffmpeg
 
+ADD A DOWNLOAD WISPER WHEN SETTING UP FEATURE
+
 
 
