@@ -22,5 +22,8 @@ sudo apt install ffmpeg
 
 ADD A DOWNLOAD WISPER WHEN SETTING UP FEATURE
 
+NOTE: For Debian12 and Linux Mint users, an automatic install feature is available by default. 
+    For Debian 12, you can follow the instructions https://wiki.debian.org/sudo/ to add sudo, or if you know how to work with root, work with root. The program will prompt you to run with sude priviliges if it thinks it needs it.
+
 
 
