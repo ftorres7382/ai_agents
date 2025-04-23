@@ -55,6 +55,7 @@ def main():
     ##########################
     # region:
     print("Validating that the host meets the program minimum requirements...\n")
+    time.sleep(3)
     # Check if the OS is supported
     supported_os = Installs_Manager.supported_os()
 
