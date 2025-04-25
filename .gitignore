@@ -3,6 +3,14 @@ assets/*
 # Ignore config file
 config.py
 
+# Let the folder be tracked
+!temp/
+# Do not track any files in the folder
+temp/*
+# Except the README
+!temp/README.md
+
+
 # Let docs be tracked
 !assets/docs/
 
