@@ -329,7 +329,7 @@ def check_python():
     if result: 
         return True
     
-    print(f"'{python_command}' command check failed, trying python3\n")    
+    print(f"Trying python3...\n")    
 
     python_command = "python3"
     result = check_python_command()
