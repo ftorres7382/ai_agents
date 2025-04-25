@@ -19,11 +19,19 @@ class Debian_Installs(Base_Installs):
         time.sleep(3)
 
         shell_content = """
+            echo "Updating apt..."
+            sleep 2
             apt update -y
             apt upgrade -y
+            echo ""
+
+            echo "Installing essential libraries for ptyhon3.12 install..."
+            sleep 2
             apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev \\
                 libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
                 xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git
+            echo ""
+                        
             wget --no-check-certificate https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz
             tar -xf Python-3.12.0.tgz
             cd Python-3.12.0

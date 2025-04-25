@@ -346,7 +346,7 @@ def check_python():
        result = result.lower()
        if result == "y":
            Installs_Manager.install_python()
-           print("Validating install python 3.12 install...")
+           print("Re-Validating python 3.12 install...")
            check_python()
     print("Please install Python 3.12!")
     sys.exit(1)
