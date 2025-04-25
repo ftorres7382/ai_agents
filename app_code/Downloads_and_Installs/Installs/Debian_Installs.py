@@ -24,7 +24,7 @@ class Debian_Installs(Base_Installs):
             apt install -y build-essential libssl-dev zlib1g-dev libbz2-dev \\
                 libreadline-dev libsqlite3-dev wget curl llvm libncurses5-dev libncursesw5-dev \\
                 xz-utils tk-dev libffi-dev liblzma-dev python3-openssl git
-            wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz
+            wget --no-check-certificate https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tgz
             tar -xf Python-3.12.0.tgz
             cd Python-3.12.0
             ./configure --enable-optimizations
