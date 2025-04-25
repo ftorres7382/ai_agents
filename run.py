@@ -347,8 +347,9 @@ def check_python():
        if result == "y":
            Installs_Manager.install_python()
            print("Re-Validating python 3.12 install...")
-           breakpoint()
-           check_python()
+           result = check_python()
+           if result == True:
+               return True
     print("Please install Python 3.12!")
     sys.exit(1)
 
