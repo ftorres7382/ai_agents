@@ -323,7 +323,7 @@ def check_python():
             return False
         
         return True
-
+    
     python_command = "python3.12"
     result = check_python_command()
     if result: 
@@ -337,7 +337,7 @@ def check_python():
         return True
     print()
     # Python 3.12 is not available, print error and exit
-    print("'python3.12' and 'python3' commands are not present or meet program requirements!")
+    print("'python3.12' and 'python3' commands are not present or do not meet program requirements!")
     time.sleep(3)
     if supported_os:
        print()
@@ -347,6 +347,7 @@ def check_python():
        if result == "y":
            Installs_Manager.install_python()
            print("Re-Validating python 3.12 install...")
+           breakpoint()
            check_python()
     print("Please install Python 3.12!")
     sys.exit(1)
