@@ -46,14 +46,14 @@ class Debian_Installs(Base_Installs):
             f.write(f"cd {python_install_dir}\n")
             f.write(shell_content)
         
-        subprocess.run(f"bash {install_script_filepath}", shell=True)
-        
+        result = subprocess.run(f"bash {install_script_filepath}", shell=True)
+        print()
+        if result.returncode != 0:
+            print("Python install failed! Please install python3.12 manually...")
+            exit(1)
+        else:
+            print("Successfully installed python3.12!")
 
-
-
-        shutil.rmtree(python_install_dir)
-        print("Done")
-        asdf
         
 
 
