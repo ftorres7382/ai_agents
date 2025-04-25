@@ -28,7 +28,7 @@ class Debian_Installs(Base_Installs):
             tar -xf Python-3.12.0.tgz
             cd Python-3.12.0
             ./configure --enable-optimizations
-            make -j 8
+            make -j 8 -s
             make altinstall
         """
 
