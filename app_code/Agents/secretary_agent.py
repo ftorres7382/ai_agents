@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import whisper # type: ignore[import-untyped]
 import torch
+import numpy as np
 
 import typing as t
 from app_code.literals import VALID_MODEL_NAMES
@@ -119,16 +120,22 @@ class secretary_agent(base_agent):
             sample_rate=sample_rate
 
         )
+        split_interval_seconds = 12
         time_split_q = SDU.get_time_split_queue_stream(
             byte_chunks_queue=queue_stream_dict["byte_chunks_queue"],
             pulse_source_name=pulse_source_name,
-            split_interval_seconds=8,
+            split_interval_seconds=split_interval_seconds,
             sample_rate=sample_rate
         )
 
+        # This defines the window of audio that will move as it transcribes new text
+        window_chunks =  2
+        audio_window = []
+
         try: 
+            self.print("Starting listening loop ...")
             while True:
-                self.print("Starting listening loop ...")
+                
 
                 # To imporve performance, maybe keep a window of 3-5 chunks running for the transcription to have context?
                 # The more data the more time it will take....
@@ -139,11 +146,17 @@ class secretary_agent(base_agent):
                     break
                 # turn bytes to np array
                 audio_np_array = SDU.bytes_to_float32_np(bytes_chunk, device_name=default_devices_info["OUTPUT"]["pulse_name"])
-                print(len(audio_np_array))
+                audio_window.append(audio_np_array)
+                if len(audio_window) < window_chunks + 1:
+                    continue
+                
+                audio_window.pop(0)
+                final_audio_np_array = np.concatenate(audio_window)
+
                 # Get transcription
-                result = self.transcription_model.transcribe(audio_np_array, fp16=torch.cuda.is_available())
-                text = result['text'].strip()
-                print(text)
+                result = self.transcription_model.transcribe(final_audio_np_array, fp16=torch.cuda.is_available(),no_speech_threshold = 5)
+ 
+                print(result["text"])
         except KeyboardInterrupt:
             SDU.stop_subprocess(queue_stream_dict["subprocess_obj"])
 
