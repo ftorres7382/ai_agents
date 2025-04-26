@@ -331,11 +331,12 @@ class SDU:
 
 
     @classmethod
-    def bytes_to_float32_np(cls,
+    def bytes_to_np(cls,
                             raw_bytes: bytes, 
                             device_name: str,
                             channels: t.Optional[int] = None, 
-                            pcm_codec: str = "s16le"
+                            pcm_codec: str = "s16le",
+                            normalize: bool = True
                             ) -> NDArray[np.float32]:
         '''
         This function takes an audio bytes object and transforms it to a numpy array from -1 to 1 
@@ -365,8 +366,17 @@ class SDU:
             audio_np = audio_np.reshape((-1, 2))
             audio_np = audio_np.mean(axis=1)
 
-        # Normalize to float32 in range [-1.0, 1.0]
-        audio_np = audio_np.astype(np.float32) / 32768.0
+         
+
+        if normalize:
+
+            if np.issubdtype(audio_np.dtype, np.integer):
+                max_val = np.iinfo(audio_np.dtype).max
+                audio_np = audio_np.astype(np.float32) / max_val
+            elif np.issubdtype(audio_np.dtype, np.floating):
+                audio_np = audio_np.astype(np.float32)
+            else:
+                raise ValueError("Unsupported audio data type")
 
         return audio_np
         

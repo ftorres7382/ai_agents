@@ -184,7 +184,7 @@ class PLSU:
         pactl load-module module-loopback source=<speaker_monitor_source> sink=combineSink
         ----------------
         '''
-        pulse_audio_type:VALID_PULSE_AUDIO_VALUES = "sinks"
+
         cls.delete_pulse_loopbacks(loopback_name=loopback_name)
         
 

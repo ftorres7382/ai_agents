@@ -5,15 +5,17 @@ from datetime import datetime
 import whisper # type: ignore[import-untyped]
 import torch
 import numpy as np
+import vosk # type: ignore[import-untyped]
 
 import typing as t
 from app_code.literals import VALID_MODEL_NAMES
-
+from app_code.Utilities.SDU import DEVICES_INFO_DICT_TYPE
 
 
 from .base_agent import base_agent
 from app_code.Utilities import SDU, PLSU
 import config as C
+
 
 
 class secretary_agent(base_agent):
@@ -36,7 +38,7 @@ class secretary_agent(base_agent):
 
     def __init__(self, 
                  name: str,
-                 ollama_model_name: VALID_MODEL_NAMES, 
+                 ollama_model_name: VALID_MODEL_NAMES,
                  transcription_model_name: t.Literal["tiny", "base", "small", "medium", "large", "turbo"], 
                  verbose: bool = True):
         super().__init__(name=name, verbose=verbose)
@@ -44,7 +46,8 @@ class secretary_agent(base_agent):
         self.transcription_model_name = transcription_model_name
 
         self.transcription_model = whisper.load_model(self.transcription_model_name)
-        
+        passive_transcription_vosk_model_path = "assets/models/vosk-model-en-us-0.42-gigaspeech"
+        self.passive_transcription_model = vosk.Model(passive_transcription_vosk_model_path)
 
 
     
@@ -85,22 +88,16 @@ class secretary_agent(base_agent):
 
         return
        
-        
-
-    def start(self) -> None:
+    def setup_audio_loopback(self, default_source: bool = True, default_sink:bool = True) -> DEVICES_INFO_DICT_TYPE:
         '''
-        This command starts the model
+        This function sets up the audio loopback
         '''
-        self.print("Starting scretary agent...\n")
-
-        self.print("Checking data folder...\n")
-        self.data_folder_setup()
+        if default_source != True or default_sink != True:
+            raise NotImplementedError("ERROR! Custom mixing of soruce and sink has not been implemented yet!")
         
         self.print("Setting up Audio Devices...\n")
-
         default_devices_index = SDU.get_default_devices_index()
         default_devices_info = SDU.get_devices_info(default_devices_index)
-
         # Set the pulse audio loopback
         self.print("Setting up mixed input and audio loopback device...")
 
@@ -109,18 +106,24 @@ class secretary_agent(base_agent):
             default_devices_info['OUTPUT']['pulse_name'],
             C.settings['combined_audio_sink_name']
             )
-        
+        return default_devices_info
 
-        
-        # Start the stream
-        pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
-        sample_rate = 16000
+
+    def start_passive_listen(self, 
+                             loopback_devices_info: DEVICES_INFO_DICT_TYPE, 
+                             pulse_source_name: str, 
+                             sample_rate:int = 16000, 
+                             split_interval_seconds: int = 3) -> None:
+        '''
+        This function passively listens to the user until it detects that the user is speaking to it
+        '''
+        self.print("Setting up audio streams...")
         queue_stream_dict = SDU.start_byte_chunks_queue_stream(
             pulse_source_name=pulse_source_name,
             sample_rate=sample_rate
 
         )
-        split_interval_seconds = 12
+        
         time_split_q = SDU.get_time_split_queue_stream(
             byte_chunks_queue=queue_stream_dict["byte_chunks_queue"],
             pulse_source_name=pulse_source_name,
@@ -128,107 +131,57 @@ class secretary_agent(base_agent):
             sample_rate=sample_rate
         )
 
-        # This defines the window of audio that will move as it transcribes new text
-        window_chunks =  2
-        audio_window = []
-
+        # Start passive listening loop
+        rec = vosk.KaldiRecognizer(self.passive_transcription_model, sample_rate)
+        window = 5
         try: 
-            self.print("Starting listening loop ...")
+            self.print("Starting passive listening loop ...")
             while True:
-                
-
-                # To imporve performance, maybe keep a window of 3-5 chunks running for the transcription to have context?
-                # The more data the more time it will take....
-                # Maybe we need to split the data between the talking and non talking segmented to make better processing economy
                 q = time_split_q
                 bytes_chunk = q.get()
                 if bytes_chunk is None:
                     break
-                # turn bytes to np array
-                audio_np_array = SDU.bytes_to_float32_np(bytes_chunk, device_name=default_devices_info["OUTPUT"]["pulse_name"])
-                audio_window.append(audio_np_array)
-                if len(audio_window) < window_chunks + 1:
-                    continue
                 
-                audio_window.pop(0)
-                final_audio_np_array = np.concatenate(audio_window)
+                # Turn bytes chunk to numpy to standardize the input
+                audio_np_array = SDU.bytes_to_np(bytes_chunk, device_name=loopback_devices_info["OUTPUT"]["pulse_name"], normalize=False)
+                audio_bytes = audio_np_array.tobytes()
 
-                # Get transcription
-                result = self.transcription_model.transcribe(final_audio_np_array, fp16=torch.cuda.is_available(),no_speech_threshold = 5)
- 
-                print(result["text"])
+
+                if rec.AcceptWaveform(audio_bytes):
+                    result = rec.Result()
+                else:
+                    result = rec.PartialResult()
+
+                print(result)
         except KeyboardInterrupt:
             SDU.stop_subprocess(queue_stream_dict["subprocess_obj"])
 
-        return
 
 
-        audio_dirpath = os.path.join(C.settings["save_folder_path"], "secretary_agent", "audio_recordings", "raw")
-        
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S-%f")[:-3]
-        audio_filepath = os.path.join(audio_dirpath, timestamp + ".mp3")
-
-
-
-        start_time = time.time()
-        end_sec = 10
-        while (time.time() - start_time) <= end_sec:
-            q = queue_stream_dict["byte_chunks_queue"]
-            if q is not None:
-                chunk = q.get()
-                if chunk is None:
-                    break
-                print(f"Got audio chunk of size: {len(chunk)}")
-            else:
-                print("Sleeping...")
-                time.sleep(.5)
-
-
-
-        return
-    
-        audio_stream_dict = SDU.start_stream(
-            f"{C.settings['combined_audio_sink_name']}.monitor",
-            start_queue_stream=True,
-            start_filestream=True,
-            filestream_filepath=audio_filepath,
-            verbose=self.verbose
-        )
-        start_time = time.time()
-        end_sec = 10
-        while (time.time() - start_time) <= end_sec:
-            if audio_stream_dict["queue"] is not None:
-                chunk = audio_stream_dict['queue'].get()
-                if chunk is None:
-                    break
-                print(f"Got audio chunk of size: {len(chunk)}")
-            else:
-                print(audio_stream_dict)
-                print("Sleeping...")
-                time.sleep(.5)
-        
-        # Note use SpeechBrain VAD, ASR, speaker ID. Check it out later
-        # Or just use faster whisper
+    def start(self) -> None:
         '''
-        pip install faster-whisper
-        
-        from faster_whisper import WhisperModel
-
-        model = WhisperModel("base", compute_type="int8")  # or "small", "medium"
-        segments, info = model.transcribe("audio.wav", vad_filter=True)
-
-        for segment in segments:
-            print(f"[{segment.start:.2f}s - {segment.end:.2f}s] {segment.text}")
-
-        Buut SpeechBrain Has built-in speaker diarization pipeline:
-        from speechbrain.pretrained import SpeakerDiarization
-        diarize = SpeakerDiarization.from_hparams("speechbrain/speaker-diarization")
-        segments = diarize("audio.wav")
-
+        This command starts the model
         '''
+        self.print("Starting scretary agent...\n")
 
 
-        SDU.stop_stream(audio_stream_dict)
+        self.print("Checking data folder...\n")
+        self.data_folder_setup()
+        
+        # Setup mixed audio
+        pulse_source_name = f"{C.settings['combined_audio_sink_name']}.monitor"
+        loopback_devices_info = self.setup_audio_loopback()
+
+        # Start passive listening
+        self.start_passive_listen(loopback_devices_info = loopback_devices_info,
+                                  pulse_source_name = pulse_source_name,
+                                  split_interval_seconds= 3
+                                  )
+
+
+        
+
+        return
 
 
 
